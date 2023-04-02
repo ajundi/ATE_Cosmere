@@ -1,0 +1,6 @@
+[workspace]
+members=[
+	"visa",
+	"instrument_communication",
+	"ate_instrument",
+]

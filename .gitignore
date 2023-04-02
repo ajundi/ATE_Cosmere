@@ -1,0 +1,15 @@
+# Generated files
+/target/
+/.idea/
+# Cargo.lock file
+Cargo.lock
+
+# IDE-specific files
+*.rs.bak
+.vscode/
+
+# Other temporary files
+*.log
+*.swp
+*.swo
+.DS_Store

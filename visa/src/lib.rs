@@ -25,20 +25,20 @@ pub enum Binary {
 
 pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
     let libPath:String=match lib {
-        Binary::Keysight => if cfg!(target_os = "windows") {
+        Binary::Keysight => if cfg!(target_family = "windows") {
             "ktvisa32.dll".into()
         }
-        else if cfg!(target_os = "unix") && cfg!(target_pointer_width = "64"){
+        else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){
             "libiovisa.so".into()
         }
         else {return Err(Error::Unsupported);}
-        Binary::Generic => if cfg!(target_os = "windows") {
+        Binary::Generic => if cfg!(target_family = "windows") {
             "visa32".into()
         }
-        else if cfg!(target_os = "unix") && cfg!(target_pointer_width = "64"){
+        else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){
             "libvisa.so".into()
         }
-        else if cfg!(target_os = "unix") && cfg!(target_pointer_width = "32"){
+        else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "32"){
             "libvisa32.so".into()
         }
         else{return Err(Error::Unsupported);}

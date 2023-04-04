@@ -951,22 +951,22 @@ pub type ViUIntPtrSize = ViUInt32;
 // !!!
 
 /*Type definitions */
-pub type ViUInt64 = ::std::os::raw::c_ulonglong;
-pub type ViInt64 = ::std::os::raw::c_longlong;
+pub type ViUInt64 = u64;
+pub type ViInt64 = i64;
 pub type ViPUInt64 = *mut ViUInt64;
 pub type ViAUInt64 = *mut ViUInt64;
 pub type ViPInt64 = *mut ViInt64;
 pub type ViAInt64 = *mut ViInt64;
-pub type ViUInt32 = ::std::os::raw::c_ulong;
+pub type ViUInt32 = u32;
 pub type ViPUInt32 = *mut ViUInt32;
 pub type ViAUInt32 = *mut ViUInt32;
-pub type ViInt32 = ::std::os::raw::c_long;
+pub type ViInt32 = i32;
 pub type ViPInt32 = *mut ViInt32;
 pub type ViAInt32 = *mut ViInt32;
-pub type ViUInt16 = ::std::os::raw::c_ushort;
+pub type ViUInt16 = u16;
 pub type ViPUInt16 = *mut ViUInt16;
 pub type ViAUInt16 = *mut ViUInt16;
-pub type ViInt16 = ::std::os::raw::c_short;
+pub type ViInt16 = i16;
 pub type ViPInt16 = *mut ViInt16;
 pub type ViAInt16 = *mut ViInt16;
 pub type ViUInt8 = ::std::os::raw::c_uchar;

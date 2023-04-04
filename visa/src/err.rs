@@ -15,11 +15,11 @@ pub enum Error {
     ///Value of the symbol was null.
     NullSymbol,
     ///Address could not be matched to a dynamic link library
-    AddrNotMatchingDll(IoError),
-    ///Uncategorized
-    Uncategorized,
+    PathNotMatchingLibrary(IoError),
+    ///Null Character in path name
+    NullCharacter,
     ///Unsupported Target
-    Unsupported,
+    UnsupportedPlatform,
 }
 
 impl Display for Error {
@@ -38,15 +38,15 @@ impl Display for Error {
             &NullSymbol => {
                 f.write_str(": Symbol is Null.")
             },
-            &AddrNotMatchingDll(ref msg) => {
-                f.write_str(": Address Not Matching Dll")?;
+            &PathNotMatchingLibrary(ref msg) => {
+                f.write_str(": Path does not lead to a library")?;
                 msg.fmt(f)
             },
-            &Uncategorized => {
-                f.write_str(": Uncategorized Error")
+            &NullCharacter => {
+                f.write_str(": The path contains a null character")
             },
-            &Unsupported => {
-                f.write_str(": Unsupported target.")
+            &UnsupportedPlatform => {
+                Ok(())
             },
         }
     }
@@ -55,11 +55,11 @@ impl Display for Error {
 impl From<dlopen::Error> for Error {
     fn from(value: dlopen::Error) -> Self {
         match value {
-            dlopen::Error::NullCharacter(_) => { Error::Uncategorized }
+            dlopen::Error::NullCharacter(d) => { Error::NullCharacter }
             dlopen::Error::OpeningLibraryError(e) => { Error::OpeningLibraryError(e) }
             dlopen::Error::SymbolGettingError(e) => { Error::SymbolGettingError(e) }
             dlopen::Error::NullSymbol => { Error::NullSymbol }
-            dlopen::Error::AddrNotMatchingDll(e) => { Error::AddrNotMatchingDll(e) }
+            dlopen::Error::AddrNotMatchingDll(e) => { Error::PathNotMatchingLibrary(e) }
         }
     }
 }
@@ -72,16 +72,16 @@ impl ErrorTrait for Error {
             &OpeningLibraryError(_) => "Could not open library",
             &SymbolGettingError(_) => "Could not obtain symbol from the library",
             &NullSymbol => "The symbol is NULL",
-            &AddrNotMatchingDll(_) => "Address does not match any dynamic link library",
-            &Uncategorized => "Uncategorized",
-            &Unsupported => "The target system is not supported by visa"
+            &PathNotMatchingLibrary(_) => "Address does not match any dynamic link library",
+            &NullCharacter => "Uncategorized",
+            &UnsupportedPlatform => "The target system is not supported by visa"
         }
     }
 
     fn cause(&self) -> Option<&dyn ErrorTrait> {
         use self::Error::*;
         match self {
-            &OpeningLibraryError(_) | &SymbolGettingError(_) | &NullSymbol | &AddrNotMatchingDll(_) | &Uncategorized | &Unsupported => {
+            &OpeningLibraryError(_) | &SymbolGettingError(_) | &NullSymbol | &PathNotMatchingLibrary(_) | &NullCharacter | &UnsupportedPlatform => {
                 None
             }
         }

@@ -31,7 +31,7 @@ pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
         else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){
             "libiovisa.so".into()
         }
-        else {return Err(Error::Unsupported);}
+        else {return Err(Error::UnsupportedPlatform);}//Keysight doesn't have support for unix 32bit
         Binary::Generic => if cfg!(target_family = "windows") {
             "visa32".into()
         }
@@ -41,7 +41,7 @@ pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
         else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "32"){
             "libvisa32.so".into()
         }
-        else{return Err(Error::Unsupported);}
+        else{return Err(Error::UnsupportedPlatform);}
         Binary::Custom(path) =>path
     };
     unsafe {Container::load(libPath).map_err(|e| Error::from(e))}

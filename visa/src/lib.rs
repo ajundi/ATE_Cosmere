@@ -18,8 +18,8 @@ pub enum Binary {
     Keysight,
     ///National Instruments specific Visa binary which only exists if Ni-Visa is installed https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
     NiVisa,
-    ///Generic visa binary this could be any vendor implementation. If visa is installed it has to exist.
-    Generic,
+    ///Default visa binary. This could be any vendor implementation. If visa from any vendor is installed, the it has to exist.
+    Default,
     ///Custom path to a binary
     Custom(String),
 }
@@ -44,7 +44,7 @@ pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
             "libvisa.so".into()
         }
         else {return Err(Error::UnsupportedPlatform);}//NiVisa doesn't have official support for unix 32bit however it might have a .so file for 32bit
-        Binary::Generic => if cfg!(target_family = "windows") {
+        Binary::Default => if cfg!(target_family = "windows") {
             "visa32".into()
         }
         else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){

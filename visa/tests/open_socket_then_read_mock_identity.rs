@@ -48,7 +48,7 @@ fn run_mock_server() -> io::Result<()> {
 #[test]
 fn open_socket_then_read_mock_identity() -> Result<(), Box<dyn Error>> {
         let visa = visa::create(visa::Binary::Keysight)
-        .unwrap_or(visa::create(visa::Binary::Generic)?);
+        .unwrap_or(visa::create(visa::Binary::Default)?);
 
     thread::spawn(run_mock_server);
     let mut _session = 0;

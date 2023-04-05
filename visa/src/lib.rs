@@ -16,6 +16,8 @@ pub use bindings::*;
 pub enum Binary {
     ///Keysight specific Visa binary which only exists if Keysight IO is installed
     Keysight,
+    ///National Instruments specific Visa binary which only exists if Ni-Visa is installed https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
+    NiVisa,
     ///Generic visa binary this could be any vendor implementation. If visa is installed it has to exist.
     Generic,
     ///Custom path to a binary
@@ -31,7 +33,17 @@ pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
         else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){
             "libiovisa.so".into()
         }
-        else {return Err(Error::UnsupportedPlatform);}//Keysight doesn't have support for unix 32bit
+        else {return Err(Error::UnsupportedPlatform);}//Keysight doesn't have official support for unix 32bit however it might have a .so file for 32bit
+        Binary::NiVisa => if cfg!(target_family = "windows") && cfg!(target_pointer_width = "64") {
+            "nivisa64.dll".into()
+        }
+        else if cfg!(target_family = "windows") && cfg!(target_pointer_width = "32"){
+            "visa32.dll".into()
+        }
+        else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64"){
+            "libvisa.so".into()
+        }
+        else {return Err(Error::UnsupportedPlatform);}//NiVisa doesn't have official support for unix 32bit however it might have a .so file for 32bit
         Binary::Generic => if cfg!(target_family = "windows") {
             "visa32".into()
         }

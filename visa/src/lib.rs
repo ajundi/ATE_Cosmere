@@ -69,11 +69,6 @@ mod tests {
     fn failed_to_find_dll_file() {
         let lib = Binary::Custom("DummyLibraryThatDoesntExist".into());
         let visa = super::create(lib);
-        if let Err(visa) = visa {
-            println!("{:?}", visa);
-            //println!("{}", visa)
-        } else {
-            assert!(false,)
-        }
+        assert!(matches!(visa,Err(_)));
     }
 }

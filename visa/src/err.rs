@@ -39,14 +39,14 @@ impl Display for Error {
                 f.write_str(": Symbol is Null.")
             },
             &PathNotMatchingLibrary(ref msg) => {
-                f.write_str(": Path does not lead to a library")?;
+                f.write_str(": Path does not lead to a library.")?;
                 msg.fmt(f)
             },
             &NullCharacter => {
-                f.write_str(": The path contains a null character")
+                f.write_str(": The path contains a null character.")
             },
             &UnsupportedPlatform => {
-                Ok(())
+                f.write_str(": The target system is not supported by visa.")
             },
         }
     }

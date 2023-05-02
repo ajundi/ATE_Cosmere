@@ -9,8 +9,8 @@ use common::RETURN_MESSAGE;
 
 #[test]
 fn open_socket_then_read_mock_identity() -> Result<(), Box<dyn Error>> {
-        let visa = visa::create(visa::Binary::Keysight)
-        .unwrap_or(visa::create(visa::Binary::Default)?);
+    let visa = visa::create(visa::Binary::Keysight)
+    .or_else(|_| visa::create(visa::Binary::Default))?;
 
     thread::spawn(common::run_mock_server);
     let mut _session = 0;

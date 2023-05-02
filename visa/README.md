@@ -1,5 +1,5 @@
 #  Virtual instrument software architecture (VISA)
-This is an unsafe wrapper around the native implementations of Visa from multiple vendors. This wrapper allows for dynamic switching between different visa implementaitons during runtime if needed. This library is kept as close as possible to native implementation so the user will need to use CTypes such as CString, and[u8;x] arrays, c_char, c_uchar, c_schar, c_void etc. This library can be use as is or if you prefer a safe simplified abstraction then you can use instrument_communication library which will be published before May 1st 2023. 
+This is a wrapper around the native implementations of Visa from multiple vendors. This wrapper allows for dynamic switching between different visa implementaitons during runtime if needed. This library is kept as close as possible to native implementation so the user will need to use CTypes such as CString, and[u8;x] arrays, c_char, c_uchar, c_schar, c_void etc. This library can be used as is or if you prefer a safe simplified abstraction then you can use instrument_communication library which will be published before May 1st 2023. 
 
 # How to use
 To use this library you can load a visa Dynamically linked library .dll or .so etc. There are multiple options to load.

@@ -1,8 +1,8 @@
-use std::{io, thread};
-use std::time::Duration;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::time::Duration;
+use std::{io, thread};
 
 pub const RETURN_MESSAGE: &[u8; 34] = b"Cosmere,1234512,mock1000,V0.01.00\n";
 pub const IPADDRESS: &str = "127.0.0.1";
@@ -33,7 +33,10 @@ pub fn run_mock_server() -> io::Result<()> {
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
-            thread::spawn(|| handle_client(stream).unwrap_or_else(|e| eprintln!("Error handling client: {:?}", e)));
+            thread::spawn(|| {
+                handle_client(stream)
+                    .unwrap_or_else(|e| eprintln!("Error handling client: {:?}", e))
+            });
         } else if let Err(e) = stream {
             eprintln!("Error accepting client: {:?}", e);
         }

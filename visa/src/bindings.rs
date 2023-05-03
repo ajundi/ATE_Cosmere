@@ -1,4 +1,3 @@
-
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
 use std::io::Error as IoError;

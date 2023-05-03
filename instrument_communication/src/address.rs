@@ -1,9 +1,9 @@
+use crate::{Error, InstConnection};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::marker::PhantomData;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
-use crate::{InstConnection, Error};
 
 pub trait InstAddress {
     fn address(&self) -> String;
@@ -23,10 +23,8 @@ pub struct Hislip;
 #[derive(Debug)]
 pub struct VXI;
 
-
 pub fn create(address: &dyn AsRef<str>) -> Option<Box<dyn InstAddress>> {
-    visa_parse(address.as_ref())
-    .or_else(|| tcp_parse(address.as_ref()).ok())
+    visa_parse(address.as_ref()).or_else(|| tcp_parse(address.as_ref()).ok())
 }
 
 const NUMBER_IP_INTS: usize = 4;
@@ -102,14 +100,13 @@ fn visa_parse(address: &str) -> Option<Box<dyn InstAddress>> {
     let address = address.split_whitespace().collect::<String>();
     if let Some(captures) = GPIB_ADDRESS_REGEX.captures(&address) {
         let instr_num = captures[2].to_string();
-        if  instr_num.len()<3
-          &&instr_num.cmp(&"31".to_owned())==std::cmp::Ordering::Less {
+        if instr_num.len() < 3 && instr_num.cmp(&"31".to_owned()) == std::cmp::Ordering::Less {
             let address = format!("{}::{}::instr", captures[1].to_ascii_lowercase(), instr_num);
             return Some(Box::new(VisaAddress {
                 address,
                 visa_type: PhantomData::<GPIB>,
-                }));
-            }
+            }));
+        }
     }
     None
 }
@@ -130,12 +127,7 @@ impl VisaAddress<GPIB> {
         let address_parts: Vec<&str> = self.address.split("::").collect();
         let mut num = address_parts[1].parse::<i32>().unwrap();
         num += (num % 2 == 0).then(|| 1).unwrap_or(-1);
-        return format!(
-            "{}::{}::{}",
-            address_parts[0],
-            num,
-            address_parts[2]
-        );
+        return format!("{}::{}::{}", address_parts[0], num, address_parts[2]);
     }
 }
 
@@ -143,7 +135,7 @@ impl InstAddress for SocketAddr {
     fn address(&self) -> String {
         self.to_string()
     }
-    
+
     fn open_connection(&self) -> Result<Box<dyn InstConnection>, Error> {
         todo!()
     }
@@ -170,7 +162,7 @@ mod tests {
     #[test_case("GPIB0::16:INSTR";"Missing colon between instrument number and INSTR.")]
     #[test_case("GPIB0::16::instr1";"number after instr.")]
     #[test_case("GPIB0::16";"missing colons and instr.")]
-    
+
     fn test_gpib_parse_address_with_incorrect_addresses(address: &str) {
         assert!(!GPIB_ADDRESS_REGEX.is_match(address));
     }
@@ -186,7 +178,6 @@ mod tests {
         assert_eq!(&address.complement_address(), expected);
     }
 
-    
     #[test_case("GPIB0::18::INSTR", "GPIB0::17::INSTR")]
     #[test_case("GPIB0::15::INSTR", "GPIB0::13::INSTR")]
     #[test_case("GPIB1::16::INSTR", "GPIB0::17::INSTR")]
@@ -208,19 +199,18 @@ mod tests {
     #[test_case("GPIB0 :: 1::12:: INSTR ","gpib0::1::instr";"only primary address is used. Secondary address is ignored.")]
     #[test_case("GPIB1::0::INSTR","gpib1::0::instr";"0 is the minimum number allowed for GPIB instrument.")]
     #[test_case("gpib2 :: 1::12:: insTR ","gpib2::1::instr";"tolerate character cases.")]
-fn test_visa_parse_valid_address(address:&str, expected:&str) {
-    let inst_address = visa_parse(address).unwrap();
-    assert!(inst_address.address().eq_ignore_ascii_case(expected));
-}
+    fn test_visa_parse_valid_address(address: &str, expected: &str) {
+        let inst_address = visa_parse(address).unwrap();
+        assert!(inst_address.address().eq_ignore_ascii_case(expected));
+    }
 
-#[test_case("GPIB0::15::INSTRx";"having additional characters after INSTR is not valid.")]
-#[test_case("";"blank address is not valid.")]
-#[test_case("GPIB::15::INSTR";"no GPIB board number provided.")]
-#[test_case("GPIB2 :: 40::12:: INSTR ";"addresses above 30 are not valid.")]
-#[test_case("GPIB2 :: 220::12:: INSTR ";"addresses above 30 are not valid. Here is an example with a number that starts with 2 locations that are less than 30.")]
-fn test_visa_parse_invalid_address(address:&str) {
-    let inst_address = visa_parse(address);
-    assert!(inst_address.is_none());
-}
-
+    #[test_case("GPIB0::15::INSTRx";"having additional characters after INSTR is not valid.")]
+    #[test_case("";"blank address is not valid.")]
+    #[test_case("GPIB::15::INSTR";"no GPIB board number provided.")]
+    #[test_case("GPIB2 :: 40::12:: INSTR ";"addresses above 30 are not valid.")]
+    #[test_case("GPIB2 :: 220::12:: INSTR ";"addresses above 30 are not valid. Here is an example with a number that starts with 2 locations that are less than 30.")]
+    fn test_visa_parse_invalid_address(address: &str) {
+        let inst_address = visa_parse(address);
+        assert!(inst_address.is_none());
+    }
 }

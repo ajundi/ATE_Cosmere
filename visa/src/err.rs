@@ -1,9 +1,8 @@
-use std::error::Error as ErrorTrait;
-use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::convert::From;
+use std::error::Error as ErrorTrait;
 use std::ffi::NulError;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::io::Error as IoError;
-
 
 ///This is a library-specific error that is returned by all calls to all APIs.
 #[derive(Debug)]
@@ -30,24 +29,18 @@ impl Display for Error {
             &OpeningLibraryError(ref msg) => {
                 f.write_str(": ")?;
                 msg.fmt(f)
-            },
+            }
             &SymbolGettingError(ref msg) => {
                 f.write_str(": ")?;
                 msg.fmt(f)
-            },
-            &NullSymbol => {
-                f.write_str(": Symbol is Null.")
-            },
+            }
+            &NullSymbol => f.write_str(": Symbol is Null."),
             &PathNotMatchingLibrary(ref msg) => {
                 f.write_str(": Path does not lead to a library.")?;
                 msg.fmt(f)
-            },
-            &NullCharacter => {
-                f.write_str(": The path contains a null character.")
-            },
-            &UnsupportedPlatform => {
-                f.write_str(": The target system is not supported by visa.")
-            },
+            }
+            &NullCharacter => f.write_str(": The path contains a null character."),
+            &UnsupportedPlatform => f.write_str(": The target system is not supported by visa."),
         }
     }
 }
@@ -55,15 +48,14 @@ impl Display for Error {
 impl From<dlopen::Error> for Error {
     fn from(value: dlopen::Error) -> Self {
         match value {
-            dlopen::Error::NullCharacter(d) => { Error::NullCharacter }
-            dlopen::Error::OpeningLibraryError(e) => { Error::OpeningLibraryError(e) }
-            dlopen::Error::SymbolGettingError(e) => { Error::SymbolGettingError(e) }
-            dlopen::Error::NullSymbol => { Error::NullSymbol }
-            dlopen::Error::AddrNotMatchingDll(e) => { Error::PathNotMatchingLibrary(e) }
+            dlopen::Error::NullCharacter(d) => Error::NullCharacter,
+            dlopen::Error::OpeningLibraryError(e) => Error::OpeningLibraryError(e),
+            dlopen::Error::SymbolGettingError(e) => Error::SymbolGettingError(e),
+            dlopen::Error::NullSymbol => Error::NullSymbol,
+            dlopen::Error::AddrNotMatchingDll(e) => Error::PathNotMatchingLibrary(e),
         }
     }
 }
-
 
 impl ErrorTrait for Error {
     fn description(&self) -> &str {
@@ -74,17 +66,19 @@ impl ErrorTrait for Error {
             &NullSymbol => "The symbol is NULL",
             &PathNotMatchingLibrary(_) => "Address does not match any dynamic link library",
             &NullCharacter => "Uncategorized",
-            &UnsupportedPlatform => "The target system is not supported by visa"
+            &UnsupportedPlatform => "The target system is not supported by visa",
         }
     }
 
     fn cause(&self) -> Option<&dyn ErrorTrait> {
         use self::Error::*;
         match self {
-            &OpeningLibraryError(_) | &SymbolGettingError(_) | &NullSymbol | &PathNotMatchingLibrary(_) | &NullCharacter | &UnsupportedPlatform => {
-                None
-            }
+            &OpeningLibraryError(_)
+            | &SymbolGettingError(_)
+            | &NullSymbol
+            | &PathNotMatchingLibrary(_)
+            | &NullCharacter
+            | &UnsupportedPlatform => None,
         }
     }
 }
-

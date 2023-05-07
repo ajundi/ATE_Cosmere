@@ -7,7 +7,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
 use std::vec;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum InstAddr {
     VisaGPIB(VisaAddress<GPIB>),
@@ -37,19 +37,19 @@ impl InstAddr {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct Socket;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct VXI11;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct GPIB;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct USB;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct Serial;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct Hislip;
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct VXI;
 
 lazy_static! {
@@ -69,9 +69,14 @@ impl FromStr for InstAddr {
     /// Note this function doesn't handle UTF8 host names yet. It is already
     /// being explored. Example
     /// ```rust
+    /// use instrument_communication::address::InstAddr;
+    /// use std::str::FromStr;
     /// let address:&str="TCPIP::192.168.0.1::INSTR";
-    /// let method1= InstAddr::from_str(address);
-    /// let method2=address.parse::<InstAddr>();
+    /// let method1= InstAddr::from_str(address).unwrap();
+    /// let method2=address.parse::<InstAddr>().unwrap();
+    /// let method3:InstAddr=address.parse().unwrap();
+    /// assert_eq!(method1,method2);
+    /// assert_eq!(method2,method3);
     /// ```
     fn from_str(address: &str) -> Result<Self, Self::Err> {
         let address = address
@@ -228,7 +233,7 @@ fn is_u8(s: &str) -> bool {
         Err(_) => false,
     }
 }
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct VisaAddress<T> {
     address: String,
     visa_type: PhantomData<T>,

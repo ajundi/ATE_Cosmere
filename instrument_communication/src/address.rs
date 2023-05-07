@@ -1,12 +1,11 @@
 use crate::{Error, InstConnection};
+use hostname;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::marker::PhantomData;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
 use std::vec;
-use hostname;
-
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
@@ -54,28 +53,31 @@ pub struct Hislip;
 pub struct VXI;
 
 lazy_static! {
-    pub static ref GPIB_ADDRESS_REGEX: Regex =
-        Regex::new(r"^(?i)GPIB(\d*)::(\d+)(?:::\d+)?(?:::INSTR)?$").unwrap();
-    pub static ref VISASOCKET_ADDRESS_REGEX: Regex =
-        Regex::new(r"^(?i)TCPIP(\d*)::((?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9])\.)*(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9]))::(\d+)::SOCKET$").unwrap();
-    pub static ref VISAVXI11_ADDRESS_REGEX: Regex =
-        Regex::new(r"^(?i)TCPIP(\d*)::((?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9])\.)*(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9]))(?:::INSTR)?$").unwrap();
-   }
+ pub static ref GPIB_ADDRESS_REGEX: Regex =
+     Regex::new(r"^(?i)GPIB(\d*)::(\d+)(?:::\d+)?(?:::INSTR)?$").unwrap();
+ pub static ref VISASOCKET_ADDRESS_REGEX: Regex =
+     Regex::new(r"^(?i)TCPIP(\d*)::((?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9])\.)*(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9]))::(\d+)::SOCKET$").unwrap();
+ pub static ref VISAVXI11_ADDRESS_REGEX: Regex =
+     Regex::new(r"^(?i)TCPIP(\d*)::((?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9])\.)*(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9]))(?:::INSTR)?$").unwrap();
+}
 impl FromStr for InstAddr {
     type Err = String;
     ///this function takes care of parsing all types of instrument addresses
-    /// if the address matches any of the regex patterns defined above it 
-    /// will assume that it will not match any other format. It will then 
-    /// attempt to parse it and return a Result. 
+    /// if the address matches any of the regex patterns defined above it
+    /// will assume that it will not match any other format. It will then
+    /// attempt to parse it and return a Result.
     /// Note this function doesn't handle UTF8 host names yet. It is already
-    /// being explored. Example 
+    /// being explored. Example
     /// ```rust
     /// let address:&str="TCPIP::192.168.0.1::INSTR";
     /// let method1= InstAddr::from_str(address);
     /// let method2=address.parse::<InstAddr>();
     /// ```
     fn from_str(address: &str) -> Result<Self, Self::Err> {
-        let address = address.split_whitespace().collect::<String>().to_ascii_lowercase();
+        let address = address
+            .split_whitespace()
+            .collect::<String>()
+            .to_ascii_lowercase();
         if let Some(captures) = GPIB_ADDRESS_REGEX.captures(&address) {
             parse_gpib(captures)
         } else if let Some(captures) = VISASOCKET_ADDRESS_REGEX.captures(&address) {
@@ -116,7 +118,12 @@ fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> {
     let host_ip = captures[2].to_string();
     let socket: SocketAddr = socket_parsing(&format!("{}:{}", host_ip, captures[3].to_string()))?;
     return Ok(InstAddr::VisaSocket(VisaAddress {
-        address: format!("tcpip{}::{}::{}::socket", board_num, socket.ip(),socket.port()),
+        address: format!(
+            "tcpip{}::{}::{}::socket",
+            board_num,
+            socket.ip(),
+            socket.port()
+        ),
         visa_type: PhantomData::<Socket>,
     }));
 }
@@ -157,13 +164,17 @@ fn socket_parsing<T: AsRef<str>>(address: T) -> Result<SocketAddr, String> {
     let port = port
         .parse::<u16>()
         .map_err(|_| format!("Unable to parse port into a number. port: {}", port))?;
-    let ip = ip.join(":");//if it is IPV4 there will be one &str and no change. If it is IPV6 they will be joined correctly.
+    let ip = ip.join(":"); //if it is IPV4 there will be one &str and no change. If it is IPV6 they will be joined correctly.
     let ip_or_host = resolve_ip(&ip)?;
     let socket = SocketAddr::new(ip_or_host, port);
     Ok(socket)
 }
 lazy_static! {
-    pub static ref HOSTNAME: String = hostname::get().unwrap_or_else(|_| "localhost".into()).to_str().unwrap().to_owned();
+    pub static ref HOSTNAME: String = hostname::get()
+        .unwrap_or_else(|_| "localhost".into())
+        .to_str()
+        .unwrap()
+        .to_owned();
 }
 
 fn resolve_ip(ip: &str) -> Result<IpAddr, String> {
@@ -184,9 +195,10 @@ fn resolve_ip(ip: &str) -> Result<IpAddr, String> {
             .collect::<Vec<_>>()
             .join(".");
         return IpAddr::from_str(&ip).map_err(|_| format!("Unable to parse IP address: {}", ip));
-    } else if ip.eq_ignore_ascii_case("localhost") 
-    || ip.eq_ignore_ascii_case("::1")
-    || ip.eq_ignore_ascii_case(&HOSTNAME) {
+    } else if ip.eq_ignore_ascii_case("localhost")
+        || ip.eq_ignore_ascii_case("::1")
+        || ip.eq_ignore_ascii_case(&HOSTNAME)
+    {
         return Ok(IpAddr::V4(Ipv4Addr::LOCALHOST));
     } else if let Ok(ipv4) = ip.parse::<std::net::Ipv6Addr>() {
         return Ok(IpAddr::V6(ipv4));
@@ -199,15 +211,13 @@ fn resolve_ip(ip: &str) -> Result<IpAddr, String> {
     }
     Err(format!("Unable to resolve IP address: {}", ip))
 }
-fn get_ipv4_first(adds:&mut vec::IntoIter<SocketAddr>)->Option<SocketAddr>{
+fn get_ipv4_first(adds: &mut vec::IntoIter<SocketAddr>) -> Option<SocketAddr> {
     match adds.next() {
-        Some(SocketAddr::V4(ipv4_addr)) =>Some(SocketAddr::V4(ipv4_addr)),
-        Some(SocketAddr::V6(ipv6_addr)) => {
-            match adds.next(){
-                Some(SocketAddr::V4(ipv4_addr)) => Some(SocketAddr::V4(ipv4_addr)),
-                Some(SocketAddr::V6(ipv6_addr)) => Some(SocketAddr::V6(ipv6_addr)),
-                None => Some(SocketAddr::V6(ipv6_addr)),
-                }
+        Some(SocketAddr::V4(ipv4_addr)) => Some(SocketAddr::V4(ipv4_addr)),
+        Some(SocketAddr::V6(ipv6_addr)) => match adds.next() {
+            Some(SocketAddr::V4(ipv4_addr)) => Some(SocketAddr::V4(ipv4_addr)),
+            Some(SocketAddr::V6(ipv6_addr)) => Some(SocketAddr::V6(ipv6_addr)),
+            None => Some(SocketAddr::V6(ipv6_addr)),
         },
         None => None,
     }
@@ -290,7 +300,10 @@ mod tests {
     fn test_visa_socket_valid_address(address: &str, expected: &str) {
         let inst_address = address.parse::<InstAddr>();
         assert!(inst_address.is_ok());
-        assert!(inst_address.unwrap().address().eq_ignore_ascii_case(expected));
+        assert!(inst_address
+            .unwrap()
+            .address()
+            .eq_ignore_ascii_case(expected));
     }
 
     #[test_case("TCPIP0 :: 192.168.0.1:: insTR ","TCPIP0::192.168.0.1::instr";"tolerate character cases.")]
@@ -298,14 +311,20 @@ mod tests {
     fn test_visa_vxi11_valid_address(address: &str, expected: &str) {
         let inst_address = address.parse::<InstAddr>();
         assert!(inst_address.is_ok());
-        assert!(inst_address.unwrap().address().eq_ignore_ascii_case(expected));
+        assert!(inst_address
+            .unwrap()
+            .address()
+            .eq_ignore_ascii_case(expected));
     }
-    
+
     #[test]
-    fn test_machine_name_is_local_host(){
-        let inst_address = format!("TCPIP::{}::INSTR",HOSTNAME.as_str()).parse::<InstAddr>();
+    fn test_machine_name_is_local_host() {
+        let inst_address = format!("TCPIP::{}::INSTR", HOSTNAME.as_str()).parse::<InstAddr>();
         assert!(inst_address.is_ok());
-        assert!(inst_address.unwrap().address().eq_ignore_ascii_case("tcpip0::127.0.0.1::INSTR"));
+        assert!(inst_address
+            .unwrap()
+            .address()
+            .eq_ignore_ascii_case("tcpip0::127.0.0.1::INSTR"));
     }
 
     #[test]
@@ -317,7 +336,9 @@ mod tests {
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP5::test-site.com"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP6::localhost::INSTR"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP7::127.0.0.1"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP8::a-very-long-hostname-with-numbers-123.com"));
+        assert!(
+            VISAVXI11_ADDRESS_REGEX.is_match("TCPIP8::a-very-long-hostname-with-numbers-123.com")
+        );
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP9::mail.example.co.uk"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP10::a-host-name-with-dashes.com"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP11::example.co.uk"));
@@ -325,7 +346,8 @@ mod tests {
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP13::a.b.c.d"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP14::a.b-c.d"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP15::www.example.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP16::a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z"));
+        assert!(VISAVXI11_ADDRESS_REGEX
+            .is_match("TCPIP16::a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP17::test.example.co.uk"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP18::a.host-name.with.dots.com"));
         assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP19::a.b.c"));

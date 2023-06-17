@@ -9,26 +9,25 @@ use std::str::FromStr;
 use std::fmt;
 use visa_gpib::*;
 use visa_socket::*;
-use visa_vxi11::*;
+use visa_vxi::*;
 use std::borrow::Cow;
 
 pub mod socket;
 pub mod visa_gpib;
+pub mod visa_vxi;
 pub mod visa_socket;
-pub mod visa_vxi11;
-// pub mod visa_usb;
 // pub mod visa_hislip;
+// pub mod visa_usb;
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum InstAddr {
     VisaGPIB(VisaAddress<GPIB>),
-    VisaVXI11(VisaAddress<VXI11>),
+    VisaVXI11(VisaAddress<VXI>),
     VisaSocket(VisaAddress<Socket>),
     VisaHislip(VisaAddress<Hislip>),
     VisaUSB(VisaAddress<USB>),
     VisaSerial(VisaAddress<Serial>),
-    VisaVXI(VisaAddress<VXI>),
     Socket(Socket),
 }
 
@@ -72,7 +71,7 @@ impl InstAddr {
             parse_socket(&address)
         }
     }
-    
+
     pub fn address(&self) -> Cow<str> {
         match self {
             InstAddr::VisaGPIB(addr) => (&addr.address).into(),
@@ -81,7 +80,6 @@ impl InstAddr {
             InstAddr::VisaUSB(addr) => (&addr.address).into(),
             InstAddr::VisaSerial(addr) => (&addr.address).into(),
             InstAddr::VisaHislip(addr) => (&addr.address).into(),
-            InstAddr::VisaVXI(addr) => (&addr.address).into(),
             InstAddr::Socket(addr)=> match addr {
                 Socket::V4(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
                 Socket::V6(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
@@ -96,7 +94,7 @@ impl InstAddr {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VXI11;
+pub struct VXI;
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct GPIB;
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
@@ -105,8 +103,6 @@ pub struct USB;
 pub struct Serial;
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct Hislip;
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VXI;
 
 impl FromStr for InstAddr {
     type Err = String;

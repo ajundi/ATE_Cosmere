@@ -1,9 +1,9 @@
-use super::socket::socket_parsing;
+
 use crate::address::*;
 
 lazy_static! {
     pub static ref VISASOCKET_ADDRESS_REGEX: Regex =
-     Regex::new(r"^(?i)TCPIP(\d*)::((?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9])\.)*(?:[a-z]|[a-z][a-z0-9\-]*[a-z0-9]))::(\d+)::SOCKET$").unwrap();
+     Regex::new(r"^(?i)TCPIP(\d*)::([a-z0-9\.]+)::(\d+)::SOCKET$").unwrap();
 }
 
 pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> {
@@ -14,16 +14,17 @@ pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> 
         board_num
     };
     let host_ip = captures[2].to_string();
-    let socket: SocketAddr = socket_parsing(&format!("{}:{}", host_ip, captures[3].to_string()))?;
+    let socket:Socket= format!("{}:{}", host_ip, captures[3].to_string()).parse()?;
     return Ok(InstAddr::VisaSocket(VisaAddress {
         address: format!(
             "tcpip{}::{}::{}::socket",
             board_num,
-            socket.ip(),
+            socket.ip_or_host(),
             socket.port()
         ),
         visa_type: PhantomData::<Socket>,
     }));
+
 }
 
 #[cfg(test)]
@@ -39,5 +40,11 @@ mod tests {
             .unwrap()
             .address()
             .eq_ignore_ascii_case(expected));
+    }
+
+    #[test_case("TCPIP0 :: 256.168.0.1::5025:: SockEt ";"Invalid IP Address is interpreted as Host name as raw socket address")]
+    fn test_visa_socket_invalid_address_is_a_valid_host_name(address: &str) {
+        let inst_address = address.parse::<InstAddr>();
+        assert!(inst_address.is_ok());
     }
 }

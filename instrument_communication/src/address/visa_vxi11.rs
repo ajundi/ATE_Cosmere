@@ -1,4 +1,4 @@
-use super::socket::resolve_ip;
+use super::socket::parse_ip;
 use crate::address::*;
 
 lazy_static! {
@@ -14,7 +14,7 @@ pub fn parse_visa_vxi11(captures: regex::Captures) -> Result<InstAddr, String> {
         board_num
     };
     let host_ip = captures[2].to_string();
-    let ip_or_host = resolve_ip(&host_ip)?;
+    let ip_or_host = parse_ip(&host_ip)?;
     return Ok(InstAddr::VisaVXI11(VisaAddress {
         address: format!("tcpip{}::{}::instr", board_num, ip_or_host),
         visa_type: PhantomData::<VXI11>,
@@ -24,7 +24,7 @@ pub fn parse_visa_vxi11(captures: regex::Captures) -> Result<InstAddr, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address::socket::HOSTNAME;
+    use crate::address::socket::LOCALHOST;
     use test_case::test_case;
 
     #[test_case("TCPIP0 :: 192.168.0.1:: insTR ","TCPIP0::192.168.0.1::instr";"tolerate character cases.")]
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_machine_name_is_local_host() {
-        let inst_address = format!("TCPIP::{}::INSTR", HOSTNAME.as_str()).parse::<InstAddr>();
+        let inst_address = format!("TCPIP::{}::INSTR", LOCALHOST.as_str()).parse::<InstAddr>();
         assert!(inst_address.is_ok());
         assert!(inst_address
             .unwrap()
@@ -48,29 +48,26 @@ mod tests {
             .eq_ignore_ascii_case("tcpip0::127.0.0.1::INSTR"));
     }
 
-    #[test]
-    fn test_hostname_regex() {
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP1::google.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP2::amazon.com::INSTR"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP3::mail.example.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP4::ftp.test-site.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP5::test-site.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP6::localhost::INSTR"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP7::127.0.0.1"));
-        assert!(
-            VISAVXI11_ADDRESS_REGEX.is_match("TCPIP8::a-very-long-hostname-with-numbers-123.com")
-        );
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP9::mail.example.co.uk"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP10::a-host-name-with-dashes.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP11::example.co.uk"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP12::127.0.0.1::INSTR"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP13::a.b.c.d"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP14::a.b-c.d"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP15::www.example.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX
-            .is_match("TCPIP16::a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP17::test.example.co.uk"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP18::a.host-name.with.dots.com"));
-        assert!(VISAVXI11_ADDRESS_REGEX.is_match("TCPIP19::a.b.c"));
+    #[test_case("TCPIP1::google.com")]
+    #[test_case("TCPIP2::amazon.com::INSTR")]
+    #[test_case("TCPIP3::mail.example.com")]
+    #[test_case("TCPIP4::ftp.test-site.com")]
+    #[test_case("TCPIP5::test-site.com")]
+    #[test_case("TCPIP6::localhost::INSTR")]
+    #[test_case("TCPIP7::127.0.0.1")]
+    #[test_case("TCPIP8::a-very-long-hostname-with-numbers-123.com")]
+    #[test_case("TCPIP9::mail.example.co.uk")]
+    #[test_case("TCPIP10::a-host-name-with-dashes.com")]
+    #[test_case("TCPIP11::example.co.uk")]
+    #[test_case("TCPIP12::127.0.0.1::INSTR")]
+    #[test_case("TCPIP13::a.b.c.d")]
+    #[test_case("TCPIP14::a.b-c.d")]
+    #[test_case("TCPIP15::www.example.com")]
+    #[test_case("TCPIP16::a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z")]
+    #[test_case("TCPIP17::test.example.co.uk")]
+    #[test_case("TCPIP18::a.host-name.with.dots.com")]
+    #[test_case("TCPIP19::a.b.c")]
+    fn test_hostname_regex(address: &str) {
+        assert!(VISAVXI11_ADDRESS_REGEX.is_match(address));
     }
 }

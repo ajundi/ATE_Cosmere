@@ -2,40 +2,118 @@ use crate::address::*;
 
 const NUMBER_IPV4_OCTETS: usize = 4;
 
-pub fn parse_socket<T: AsRef<str>>(address: T) -> Result<InstAddr, String> {
-    let socket: SocketAddr = socket_parsing(address)?;
-    Ok(InstAddr::Socket {
-        socket,
-        address: socket.to_string(),
-    })
+lazy_static! {
+    pub static ref HOSTNAME_REGEX: Regex = Regex::new(
+        r"^(?i)(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$"
+    )
+    .unwrap();
 }
 
-pub fn socket_parsing<T: AsRef<str>>(address: T) -> Result<SocketAddr, String> {
-    let splits: Vec<&str> = address.as_ref().split(":").map(str::trim).collect();
-    if splits.len() < 2 {
-        return Err(format!("Incorrect Socket address format. Address format is shown inside the quotes \"IP:PortNumber\" Or \"HostName:PortNumber\" examples:\n 192.168.0.20:8080 or PCNAME1:50050"));
+pub fn parse_socket<T: AsRef<str>>(address: T) -> Result<InstAddr, String> {
+    let socket: Socket = address.as_ref().parse()?;
+    Ok(InstAddr::Socket(socket))
+}
+
+#[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
+pub enum Socket {
+    V4(SocketAddrV4),
+    V6(SocketAddrV6),
+    Raw(RawSocket),
+}
+
+impl Socket {
+    /// this function takes care of parsing socket addresses
+    /// if the address matches any of the regex patterns defined above it
+    /// will assume that it will not match any other format. It will then
+    /// attempt to parse it and return a Result.
+    /// Note this function doesn't handle UTF8 host names yet. It is already
+    /// being explored.
+    /// ```rust
+    /// use instrument_communication::address::socket::Socket;
+    /// use std::str::FromStr;
+    /// let address:&str="192.168.0.1:5025";
+    /// let method1= Socket::new(address).unwrap();
+    /// let method2= Socket::from_str(address).unwrap();
+    /// let method3=address.parse::<Socket>().unwrap();
+    /// let method4:Socket=address.parse().unwrap();
+    /// assert_eq!(method1,method2);
+    /// assert_eq!(method2,method3);
+    /// assert_eq!(method3,method4);
+    /// ```
+    pub fn new(address:impl AsRef<str>) ->Result<Self, String>{
+        let splits: Vec<&str> = address.as_ref().split(":").map(str::trim).collect();
+        if splits.len() < 2 {
+            return Err(format!("Incorrect Socket address format. Address format is shown inside the quotes \"IP:PortNumber\" Or \"HostName:PortNumber\" examples:\n 192.168.0.20:8080 or PCNAME1:50050"));
+        }
+        let (port, ip) = splits
+            .split_last()
+            .expect("We already checked it has at least 2 elements");
+        let port = port
+            .parse::<u16>()
+            .map_err(|_| format!("Unable to parse port into a number. port: {}", port))?;
+        let ip = ip.join(":"); //if it is IPV4 there will be one &str and no change. If it is IPV6 they will be joined correctly.
+        if let Ok(ip) = parse_ip(&ip) {
+            match ip {
+                IpAddr::V4(addr) => Ok(Socket::V4(SocketAddrV4::new(addr, port))),
+                IpAddr::V6(addr) => Ok(Socket::V6(SocketAddrV6::new(addr, port, 0, 0))),
+            }
+        } else if HOSTNAME_REGEX.is_match(&ip) {
+            Ok(Socket::Raw(RawSocket {
+                host_name: ip.to_owned(),
+                port: port,
+            }))
+        } else {
+            Err(format!("Incorrect Socket address format. Address format is shown inside the quotes \"IP:PortNumber\" Or \"HostName:PortNumber\" examples:\n 192.168.0.20:8080 or PCNAME1:50050"))
+        }
     }
-    let (port, ip) = splits
-        .split_last()
-        .expect("We already checked it has at least 2 elements");
-    let port = port
-        .parse::<u16>()
-        .map_err(|_| format!("Unable to parse port into a number. port: {}", port))?;
-    let ip = ip.join(":"); //if it is IPV4 there will be one &str and no change. If it is IPV6 they will be joined correctly.
-    let ip_or_host = resolve_ip(&ip)?;
-    let socket = SocketAddr::new(ip_or_host, port);
-    Ok(socket)
+
+    pub fn ip_or_host(&self) -> Cow<str> {
+        match self {
+            Socket::V4(ref addr) => addr.ip().to_string().into(),
+            Socket::V6(ref addr) => addr.ip().to_string().into(),
+            Socket::Raw(addr) => (&addr.host_name).into(),
+        }
+    }
+
+    pub const fn port(&self) -> u16 {
+        match self {
+            Socket::V4(addr) => addr.port(),
+            Socket::V6(addr) => addr.port(),
+            Socket::Raw(addr) => addr.port,
+        }
+    }
+}
+
+impl FromStr for Socket {
+    type Err = String;
+    fn from_str(address: &str) -> Result<Self, Self::Err> {
+        Socket::new(address)
+    }
+        
 }
 
 lazy_static! {
-    pub static ref HOSTNAME: String = hostname::get()
+    pub static ref LOCALHOST: String = hostname::get()
         .unwrap_or_else(|_| "localhost".into())
         .to_str()
         .unwrap()
         .to_owned();
 }
 
-pub fn resolve_ip(ip: &str) -> Result<IpAddr, String> {
+/// This is a non-standard parse IP implementation as It accepts IPs written
+/// with leading zeros such as 127.00.000.001  
+///
+/// # Examples
+///
+/// ```
+/// use instrument_communication::address::socket::parse_ip;
+///
+/// assert_eq!(parse_ip("127.00.000.001"),parse_ip("127.0.0.1"));
+/// assert_eq!(parse_ip("127.00.000.001"),parse_ip("localhost "));
+/// assert_ne!(parse_ip("127.0.0.2"),parse_ip("127.0.0.1"));
+/// ```
+pub fn parse_ip(ip: &str) -> Result<IpAddr, String> {
+    let ip: &str = ip.trim();
     let split_ip = ip.split('.').collect::<Vec<_>>();
     let count = split_ip.len();
     let is_ipv4 = (count, split_ip.clone().into_iter().all(is_u8)) == (NUMBER_IPV4_OCTETS, true);
@@ -55,38 +133,18 @@ pub fn resolve_ip(ip: &str) -> Result<IpAddr, String> {
         return IpAddr::from_str(&ip).map_err(|_| format!("Unable to parse IP address: {}", ip));
     } else if ip.eq_ignore_ascii_case("localhost")
         || ip.eq_ignore_ascii_case("::1")
-        || ip.eq_ignore_ascii_case(&HOSTNAME)
+        || ip.eq_ignore_ascii_case(&LOCALHOST)
     {
         return Ok(IpAddr::V4(Ipv4Addr::LOCALHOST));
-    } else if let Ok(ipv4) = ip.parse::<std::net::Ipv6Addr>() {
-        return Ok(IpAddr::V6(ipv4));
+    } else if let Ok(ipv6) = ip.parse::<std::net::Ipv6Addr>() {
+        return Ok(IpAddr::V6(ipv6));
     } else {
-        if let Ok(addrs) = &mut (ip.to_owned() + ":0").to_socket_addrs() {
-            if let Some(addr) = get_ipv4_first(addrs) {
-                return Ok(addr.ip());
-            }
-        }
+        return Err(format!("Unable to parse IP address: {}", ip));
     }
-    Err(format!("Unable to resolve IP address: {}", ip))
 }
 
-fn get_ipv4_first(adds: &mut vec::IntoIter<SocketAddr>) -> Option<SocketAddr> {
-    let mut first_ipv6: Option<SocketAddr> = None;
-    for addr in adds {
-        match addr {
-            SocketAddr::V4(ipv4_addr) => return Some(SocketAddr::V4(ipv4_addr)),
-            SocketAddr::V6(ipv6_addr) => {
-                if first_ipv6.is_none() {
-                    first_ipv6 = Some(SocketAddr::V6(ipv6_addr));
-                }
-            }
-        }
-    }
-    first_ipv6
-}
-
-///checks if the string is a number between 0 and 255
-/// ```rust 
+/// checks if the string is a number between 0 and 255
+/// ```rust
 /// use instrument_communication::address::socket::is_u8;
 /// assert!(is_u8("0"));
 /// assert!(is_u8("11"));
@@ -99,5 +157,27 @@ pub fn is_u8(s: &str) -> bool {
     match s.parse::<u8>() {
         Ok(_) => true,
         Err(_) => false,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::address::socket::*;
+    use std::str::FromStr;
+    #[test]
+    fn testing_socket_address() {
+        let address: &str = "192.168.0.1:5025";
+        let method1 = Socket::from_str(address).unwrap();
+        let method2 = address.parse::<Socket>().unwrap();
+        let method3: Socket = address.parse().unwrap();
+        assert_eq!(method1, method2);
+        assert_eq!(method2, method3);
+    }
+
+    #[test]
+    fn testing_localhost_and_its_ip_match() {
+        assert_eq!(parse_ip("127.00.000.001"), parse_ip("127.0.0.1"));
+        assert_eq!(parse_ip("127.00.000.001"), parse_ip("localhost "));
+        assert_ne!(parse_ip("127.0.0.2"), parse_ip("127.0.0.1"));
     }
 }

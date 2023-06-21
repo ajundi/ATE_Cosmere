@@ -89,7 +89,15 @@ impl InstAddr {
     }
     ///Consume the address and return a communication interface
     pub fn connect(self) -> Result<Box<dyn InstConnection>, Error<'static>> {
-        todo!();
+        match self {
+            InstAddr::VisaGPIB(addr) => addr.connect(),
+            InstAddr::VisaVXI11(addr) => addr.connect(),
+            InstAddr::VisaSocket(addr) => addr.connect(),
+            InstAddr::VisaHislip(addr) => addr.connect(),
+            InstAddr::VisaUSB(addr) => addr.connect(),
+            InstAddr::VisaSerial(addr) => addr.connect(),
+            InstAddr::Socket(addr) => addr.connect(),
+        }
     }
 }
 
@@ -115,6 +123,11 @@ impl FromStr for InstAddr {
 pub struct VisaAddress<T> {
     address: String,
     visa_type: PhantomData<T>,
+}
+impl<T> VisaAddress <T>{
+    fn connect(self) -> Result<Box<dyn InstConnection>, Error<'static>> {
+        todo!()
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]

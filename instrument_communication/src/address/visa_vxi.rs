@@ -1,4 +1,4 @@
-use super::socket::parse_ip;
+use super::socket::NetworkAddr;
 use crate::address::*;
 
 lazy_static! {
@@ -14,7 +14,7 @@ pub fn parse_visa_vxi11(captures: regex::Captures) -> Result<InstAddr, String> {
         board_num
     };
     let host_ip = captures[2].to_string();
-    let ip_or_host = parse_ip(&host_ip)?;
+    let ip_or_host =  NetworkAddr::from_str(&host_ip)?;
     return Ok(InstAddr::VisaVXI11(VisaAddress {
         address: format!("tcpip{}::{}::instr", board_num, ip_or_host),
         visa_type: PhantomData::<VXI>,
@@ -24,7 +24,7 @@ pub fn parse_visa_vxi11(captures: regex::Captures) -> Result<InstAddr, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address::socket::LOCALHOST;
+    use crate::address::socket::LOCAL_MACHINE;
     use test_case::test_case;
 
     #[test_case("TCPIP0 :: 192.168.0.1:: insTR ","TCPIP0::192.168.0.1::instr";"tolerate character cases.")]
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_machine_name_is_local_host() {
-        let inst_address = format!("TCPIP::{}::INSTR", LOCALHOST.as_str()).parse::<InstAddr>();
+        let inst_address = format!("TCPIP::{}::INSTR", LOCAL_MACHINE.as_str()).parse::<InstAddr>();
         assert!(inst_address.is_ok());
         assert!(inst_address
             .unwrap()

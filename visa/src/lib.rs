@@ -1,76 +1,90 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(unused)]
 
 mod bindings;
-mod err;
+pub mod err;
 
 use crate::err::Error;
+use std::borrow::Cow;
 pub use bindings::*;
-use dlopen::wrapper::{Container, WrapperApi};
-use dlopen_derive::WrapperApi;
-use std::{io::Error as IoError, os::raw::c_float};
-
-pub enum Binary {
-    ///Keysight specific Visa binary which only exists if Keysight IO is installed
+use dlopen::wrapper::Container;
+// use visa::Visa;
+#[derive(Clone,Debug,PartialEq, Eq, PartialOrd, Ord,Hash)]
+pub enum Binary{
+    ///Keysight specific Visa binary which only exists if Keysight IO is installed. Source: https://www.keysight.com/de/de/lib/software-detail/computer-software/io-libraries-suite-downloads-2175637/keysight-io-libraries-suite-2022-for-windows.html
     Keysight,
-    ///National Instruments specific Visa binary which only exists if Ni-Visa is installed https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
+    ///National Instruments specific Visa binary which only exists if Ni-Visa is installed. Source: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
     NiVisa,
-    ///Default visa binary. This could be any vendor implementation. If visa from any vendor is installed, the it has to exist.
-    Default,
+    ///Primary visa binary. This could be any vendor implementation. If visa from any vendor is installed, this option typically works. The primary binary is typically named visa32.dll in windows. 
+    Primary,
     ///Custom path to a binary
     Custom(String),
 }
 
-pub fn create(lib: Binary) -> Result<Container<Wrapper>, Error> {
-    let libPath: String = match lib {
-        Binary::Keysight => {
-            if cfg!(target_family = "windows") {
-                "ktvisa32.dll".into()
-            } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
-                "libiovisa.so".into()
-            } else {
-                return Err(Error::UnsupportedPlatform);
+impl Binary{
+    fn binary_name(&self)->Result<Cow<str>, Error> {
+        Ok(match self {
+            Binary::Keysight => {
+                if cfg!(target_family = "windows") {
+                    "ktvisa32.dll".into()
+                } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
+                    "libiovisa.so".into()
+                } else {
+                    return Err(Error::UnsupportedPlatform);
+                }
+            } //Keysight doesn't have official support for unix 32bit however it might have a .so file for 32bit
+            Binary::NiVisa => {
+                if cfg!(target_family = "windows") && cfg!(target_pointer_width = "64") {
+                    "nivisa64.dll".into()
+                } else if cfg!(target_family = "windows") && cfg!(target_pointer_width = "32") {
+                    "visa32.dll".into()
+                } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
+                    "libvisa.so".into()
+                } else {
+                    return Err(Error::UnsupportedPlatform);
+                }
+            } //NiVisa doesn't have official support for unix 32bit however it might have a .so file for 32bit
+            Binary::Primary => {
+                if cfg!(target_family = "windows") {
+                    "visa32".into()
+                } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
+                    "libvisa.so".into()
+                } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "32") {
+                    "libvisa32.so".into()
+                } else {
+                    return Err(Error::UnsupportedPlatform);
+                }
             }
-        } //Keysight doesn't have official support for unix 32bit however it might have a .so file for 32bit
-        Binary::NiVisa => {
-            if cfg!(target_family = "windows") && cfg!(target_pointer_width = "64") {
-                "nivisa64.dll".into()
-            } else if cfg!(target_family = "windows") && cfg!(target_pointer_width = "32") {
-                "visa32.dll".into()
-            } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
-                "libvisa.so".into()
-            } else {
-                return Err(Error::UnsupportedPlatform);
-            }
-        } //NiVisa doesn't have official support for unix 32bit however it might have a .so file for 32bit
-        Binary::Default => {
-            if cfg!(target_family = "windows") {
-                "visa32".into()
-            } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "64") {
-                "libvisa.so".into()
-            } else if cfg!(target_family = "unix") && cfg!(target_pointer_width = "32") {
-                "libvisa32.so".into()
-            } else {
-                return Err(Error::UnsupportedPlatform);
-            }
-        }
-        Binary::Custom(path) => path,
-    };
-    unsafe { Container::load(libPath).map_err(|e| Error::from(e)) }
+            Binary::Custom(path) => path.into(),
+        })
+    }
+}
+
+impl Default for Binary {
+    fn default() -> Self {
+        Binary::Primary
+    }
+}
+
+impl ToString for Binary {
+    fn to_string(&self) -> String {
+        self.binary_name().unwrap_or_else(|e|e.to_string().into()).into()
+    }
+}
+
+pub fn create(bin: &Binary) -> Result<Container<VisaFuncs>, Error> {
+    unsafe { Container::load(bin.binary_name()?.as_ref()).map_err(|e| Error::from(e)) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Binary;
-    use std::error::Error;
-    use std::ffi::CString;
 
     #[test]
     fn failed_to_find_dll_file() {
-        let lib = Binary::Custom("DummyLibraryThatDoesntExist".into());
-        let visa = super::create(lib);
+        let binary = Binary::Custom("DummyLibraryThatDoesntExist".into());
+        let visa = super::create(&binary);
         assert!(matches!(visa, Err(_)));
     }
 }

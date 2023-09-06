@@ -1,6 +1,5 @@
 use std::convert::From;
 use std::error::Error as ErrorTrait;
-use std::ffi::NulError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::io::Error as IoError;
 
@@ -48,7 +47,7 @@ impl Display for Error {
 impl From<dlopen::Error> for Error {
     fn from(value: dlopen::Error) -> Self {
         match value {
-            dlopen::Error::NullCharacter(d) => Error::NullCharacter,
+            dlopen::Error::NullCharacter(_) => Error::NullCharacter,
             dlopen::Error::OpeningLibraryError(e) => Error::OpeningLibraryError(e),
             dlopen::Error::SymbolGettingError(e) => Error::SymbolGettingError(e),
             dlopen::Error::NullSymbol => Error::NullSymbol,

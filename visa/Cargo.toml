@@ -1,8 +1,8 @@
 [package]
 name = "visa"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-description = "A VISA Wrapper which allows concurrent and dynamic switching between visa implementations."
+description = "A VISA (Virtual Instrument Software Architecture) Wrapper which allows concurrent and dynamic switching between visa implementations from different vendors."
 repository = "https://github.com/ajundi/ATE_Cosmere/tree/main/visa"
 license = "MIT"
 

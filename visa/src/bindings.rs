@@ -1,6 +1,5 @@
-use dlopen::wrapper::{Container, WrapperApi};
+use dlopen::wrapper::WrapperApi;
 use dlopen_derive::WrapperApi;
-use std::io::Error as IoError;
 
 #[derive(WrapperApi)]
 pub struct Wrapper {
@@ -39,7 +38,7 @@ pub struct Wrapper {
     viSetAttribute: fn(vi: ViObject, attrName: ViAttr, attrValue: ViAttrState) -> ViStatus,
     viGetAttribute:
         fn(vi: ViObject, attrName: ViAttr, attrValue: *mut ::std::os::raw::c_void) -> ViStatus,
-    viStatusDesc: fn(vi: ViObject, status: ViStatus, desc: *mut ViChar) -> ViStatus,
+    viStatusDesc: fn(vi: ViObject, status: ViStatus, desc: *mut ViByte) -> ViStatus,
     viTerminate: fn(vi: ViObject, degree: ViUInt16, jobId: ViJobId) -> ViStatus,
     viLock: fn(
         vi: ViSession,
@@ -83,23 +82,12 @@ pub struct Wrapper {
     viFlush: fn(vi: ViSession, mask: ViUInt16) -> ViStatus,
     viBufWrite: fn(vi: ViSession, buf: ViConstBuf, cnt: ViUInt32, retCnt: ViPUInt32) -> ViStatus,
     viBufRead: fn(vi: ViSession, buf: ViPBuf, cnt: ViUInt32, retCnt: ViPUInt32) -> ViStatus,
-    viPrintf: extern "C" fn(vi: ViSession, writeFmt: ViConstString, ...) -> ViStatus,
     viVPrintf: fn(vi: ViSession, writeFmt: ViConstString, params: ViVAList) -> ViStatus,
-    viSPrintf: extern "C" fn(vi: ViSession, buf: ViPBuf, writeFmt: ViConstString, ...) -> ViStatus,
     viVSPrintf:
         fn(vi: ViSession, buf: ViPBuf, writeFmt: ViConstString, parms: ViVAList) -> ViStatus,
-    viScanf: extern "C" fn(vi: ViSession, readFmt: ViConstString, ...) -> ViStatus,
     viVScanf: fn(vi: ViSession, readFmt: ViConstString, params: ViVAList) -> ViStatus,
-    viSScanf:
-        extern "C" fn(vi: ViSession, buf: ViConstBuf, readFmt: ViConstString, ...) -> ViStatus,
     viVSScanf:
         fn(vi: ViSession, buf: ViConstBuf, readFmt: ViConstString, parms: ViVAList) -> ViStatus,
-    viQueryf: extern "C" fn(
-        vi: ViSession,
-        writeFmt: ViConstString,
-        readFmt: ViConstString,
-        ...
-    ) -> ViStatus,
     viVQueryf: fn(
         vi: ViSession,
         writeFmt: ViConstString,

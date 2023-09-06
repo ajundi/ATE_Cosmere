@@ -2,7 +2,7 @@ use dlopen::wrapper::WrapperApi;
 use dlopen_derive::WrapperApi;
 
 #[derive(WrapperApi)]
-pub struct Wrapper {
+pub struct VisaFuncs {
     viOpenDefaultRM: fn(vi: ViPSession) -> ViStatus,
     viFindRsrc: fn(
         sesn: ViSession,

@@ -1,13 +1,14 @@
 #  Virtual instrument software architecture (VISA)
-This is a wrapper around the native implementations of Visa from multiple vendors. This wrapper allows for dynamic switching between different visa implementaitons during runtime if needed. This library is kept as close as possible to native implementation so the user will need to use CTypes such as CString, and[u8;x] arrays, c_char, c_uchar, c_schar, c_void etc. This library can be used as is or if you prefer a safe simplified abstraction then you can use instrument_communication library which will be published before May 1st 2023. 
+This is a wrapper around the native implementations of Visa from multiple vendors. This wrapper allows for concurrent use of different visa implemntations or dynamic switching between them during runtime if needed. This library is kept as close as possible to native implementation so the user will need to use CTypes such as CString, and[u8;x] arrays, c_char, c_uchar, c_schar, c_void etc. This library can be used as is or if you prefer a safe simplified abstraction then you can use instrument_communication library which will be published later this year 2023. 
 
 # How to use
-To use this library you can load a visa Dynamically linked library .dll or .so etc. There are multiple options to load.
+To use this library you can load a visa dynamically linked library .dll or .so etc. Keysight option targets the binary name that is installed by default on the target platform when using the official keysight installer. Similarly NiVisa is for National Instrument visa. The "Primary" option targets whichever implementation currently serves as the default visa implementation. On windows 64 the primary is C:\Windows\System32\visa32.dll.
+The method below sequantially tries to load each in order and returns on first success or last failure.
 ```rust
-let visa = visa::create(visa::Binary::Keysight)
-.unwrap_or(visa::create(visa::Binary::NiVisa))
-.unwrap_or(visa::create(visa::Binary::Default))
-.unwrap_or(visa::create(visa::Binary::Custom("visa.so".into())))?;
+ let visa = visa::create(&visa::Binary::Keysight)
+ .or_else(|_| visa::create(&visa::Binary::NiVisa))
+ .or_else(|_| visa::create(&visa::Binary::Primary))
+ .or_else(|_| visa::create(&visa::Binary::Custom("visa.so".into())));
 ```
 then you need to open a default session
 ```rust

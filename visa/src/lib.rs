@@ -6,24 +6,24 @@ mod bindings;
 pub mod err;
 
 use crate::err::Error;
-use std::borrow::Cow;
 pub use bindings::*;
 use dlopen::wrapper::Container;
+use std::borrow::Cow;
 // use visa::Visa;
-#[derive(Clone,Debug,PartialEq, Eq, PartialOrd, Ord,Hash)]
-pub enum Binary{
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Binary {
     ///Keysight specific Visa binary which only exists if Keysight IO is installed. Source: https://www.keysight.com/de/de/lib/software-detail/computer-software/io-libraries-suite-downloads-2175637/keysight-io-libraries-suite-2022-for-windows.html
     Keysight,
     ///National Instruments specific Visa binary which only exists if Ni-Visa is installed. Source: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
     NiVisa,
-    ///Primary visa binary. This could be any vendor implementation. If visa from any vendor is installed, this option typically works. The primary binary is typically named visa32.dll in windows. 
+    ///Primary visa binary. This could be any vendor implementation. If visa from any vendor is installed, this option typically works. The primary binary is typically named visa32.dll in windows.
     Primary,
     ///Custom path to a binary
     Custom(String),
 }
 
-impl Binary{
-    fn binary_name(&self)->Result<Cow<str>, Error> {
+impl Binary {
+    fn binary_name(&self) -> Result<Cow<str>, Error> {
         Ok(match self {
             Binary::Keysight => {
                 if cfg!(target_family = "windows") {
@@ -69,10 +69,18 @@ impl Default for Binary {
 
 impl ToString for Binary {
     fn to_string(&self) -> String {
-        self.binary_name().unwrap_or_else(|e|e.to_string().into()).into()
+        self.binary_name()
+            .unwrap_or_else(|e| e.to_string().into())
+            .into()
     }
 }
-
+///This factory method loads a visa dynamically linked library .dll or .so etc.
+///```rust
+/// let visa =   visa::create(&visa::Binary::Keysight)
+/// .or_else(|_| visa::create(&visa::Binary::NiVisa))
+/// .or_else(|_| visa::create(&visa::Binary::Primary))
+/// .or_else(|_| visa::create(&visa::Binary::Custom("visa.so".into())));
+///```
 pub fn create(bin: &Binary) -> Result<Container<VisaFuncs>, Error> {
     unsafe { Container::load(bin.binary_name()?.as_ref()).map_err(|e| Error::from(e)) }
 }

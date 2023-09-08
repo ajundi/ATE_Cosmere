@@ -1,9 +1,8 @@
-
 use crate::address::*;
 
 lazy_static! {
     pub static ref VISASOCKET_ADDRESS_REGEX: Regex =
-     Regex::new(r"^(?i)TCPIP(\d*)::([a-z0-9\.]+)::(\d+)::SOCKET$").unwrap();
+        Regex::new(r"^(?i)TCPIP(\d*)::([a-z0-9\.]+)::(\d+)::SOCKET$").unwrap();
 }
 
 pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> {
@@ -14,7 +13,7 @@ pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> 
         board_num
     };
     let host_ip = captures[2].to_string();
-    let socket:Socket= format!("{}:{}", host_ip, captures[3].to_string()).parse()?;
+    let socket: Socket = format!("{}:{}", host_ip, captures[3].to_string()).parse()?;
     return Ok(InstAddr::VisaSocket(VisaAddress {
         address: format!(
             "tcpip{}::{}::{}::socket",
@@ -24,7 +23,6 @@ pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> 
         ),
         visa_type: PhantomData::<Socket>,
     }));
-
 }
 
 #[cfg(test)]

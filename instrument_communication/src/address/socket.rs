@@ -85,7 +85,7 @@ impl Socket {
         }
     }
 
-    pub fn connect(self) -> Result<Box<dyn InstConnection>, Error<'static>> {
+    pub fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
         match self{
             Socket::V4(addr) => todo!(),
             Socket::V6(addr) => todo!(),

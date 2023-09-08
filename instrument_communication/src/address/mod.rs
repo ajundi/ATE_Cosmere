@@ -1,8 +1,10 @@
+use crate::connection::visa_conn;
 use crate::{Error, InstConnection};
 use hostname;
 use lazy_static::lazy_static;
 use regex::Regex;
 use socket::*;
+use std::ffi::CString;
 use std::marker::PhantomData;
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4,SocketAddrV6};
 use std::str::FromStr;
@@ -88,7 +90,7 @@ impl InstAddr {
         }
     }
     ///Consume the address and return a communication interface
-    pub fn connect(self) -> Result<Box<dyn InstConnection>, Error<'static>> {
+    pub fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
         match self {
             InstAddr::VisaGPIB(addr) => addr.connect(),
             InstAddr::VisaVXI11(addr) => addr.connect(),
@@ -120,13 +122,20 @@ impl FromStr for InstAddr {
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VisaAddress<T> {
+pub struct VisaAddress<T> 
+{
     address: String,
     visa_type: PhantomData<T>,
 }
 impl<T> VisaAddress <T>{
-    fn connect(self) -> Result<Box<dyn InstConnection>, Error<'static>> {
+    fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
+        let x=visa_conn::VisaConn::connect(self,None)?;
         todo!()
+    }
+}
+impl <T> Into<*const i8> for VisaAddress<T> {
+    fn into(self) -> *const i8 {
+        CString::new(self.address).unwrap_or(CString::default()).as_ptr()
     }
 }
 

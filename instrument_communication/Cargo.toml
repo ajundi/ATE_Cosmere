@@ -7,7 +7,10 @@ edition = "2021"
 regex = "1.8.1"
 lazy_static="1.4.0"
 hostname = "^0.3"
-
+visa={ path = "../visa" }
+dlopen = "0.1.8"
+log = "0.4"
+env_logger = "0.10.0"
 
 [dev-dependencies]
 test-case = "3.1.0"

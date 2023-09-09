@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,Default)]
-pub enum TerminationString{
+pub enum TerminationBytes{
     LF,
     CR,
     CRLF,

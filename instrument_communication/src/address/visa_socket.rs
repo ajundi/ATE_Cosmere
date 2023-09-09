@@ -14,14 +14,14 @@ pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> 
     };
     let host_ip = captures[2].to_string();
     let socket: Socket = format!("{}:{}", host_ip, captures[3].to_string()).parse()?;
-    return Ok(InstAddr::VisaSocket(VisaAddress {
+    return Ok(InstAddr::Visa(VisaAddress {
         address: format!(
             "tcpip{}::{}::{}::socket",
             board_num,
             socket.ip_or_host(),
             socket.port()
         ),
-        visa_type: PhantomData::<Socket>,
+        visa_type: VisaType::Socket,
     }));
 }
 

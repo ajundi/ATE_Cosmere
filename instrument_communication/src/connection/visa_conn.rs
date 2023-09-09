@@ -1,7 +1,7 @@
 use crate::address::{InstAddr, VisaAddress};
 use crate::communication::InstConnection;
 use crate::err::Error;
-use crate::termination_string::TerminationString;
+use crate::termination_bytes::TerminationBytes;
 use dlopen::wrapper::Container;
 use lazy_static::*;
 use log::error;
@@ -9,6 +9,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use visa::*;
+use std::time::Duration;
+
 const MAXIMUM_BUFFER_SIZE: usize = 50000000;
 const DEFAULT_BUFFER_SIZE: usize = 4096;
 const ERR_MSG_BUFFER_SIZE: usize = 512;
@@ -23,10 +25,10 @@ pub struct VisaConn {
     address: InstAddr,
     buffer_size: usize,
     session: u32,
-    term_string: TerminationString,
+    term_string: TerminationBytes,
     frame_size: usize,
     is_term_char_attr_set: bool,
-    timeout: i32,
+    timeout: Duration,
 }
 
 impl VisaConn {
@@ -43,17 +45,17 @@ impl VisaConn {
         }
     }
 
-    pub fn connect<T>(
-        addr: VisaAddress<T>,
+    pub fn connect(
+        addr: VisaAddress,
         override_binary: Option<Binary>,
     ) -> Result<VisaConn, Error> {
-        let mut binary = match override_binary {
+        let binary = match override_binary {
             Some(b) => b,
             None => VisaConn::get_default_binary(),
         };
         let lib = try_load_binary(binary)?;
         let mut vi = 0;
-        match lib.0.viOpen(lib.1, addr.into(), 0, 0, &mut vi) {
+        match lib.0.viOpen(lib.1, addr.clone().into(), 0, 0, &mut vi) {
             status if status >= 0 => (),
             status => {
                 let msg = get_error_code(lib.0, vi, status).unwrap_or("Failed to connect".into());
@@ -69,13 +71,13 @@ impl VisaConn {
         };
         Ok(VisaConn{
             bin: lib.0,
-            address: todo!(),
+            address: addr.into(),
             buffer_size: DEFAULT_BUFFER_SIZE,
             session: vi,
-            term_string: todo!(),
-            frame_size: todo!(),
-            is_term_char_attr_set: todo!(),
-            timeout: todo!(),
+            term_string: TerminationBytes::default(),
+            frame_size: DEFAULT_BUFFER_SIZE,
+            is_term_char_attr_set: false,
+            timeout: Duration::from_secs(2),
         })
     }
 }

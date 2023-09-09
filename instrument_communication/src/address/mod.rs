@@ -5,7 +5,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use socket::*;
 use std::ffi::CString;
-use std::marker::PhantomData;
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4,SocketAddrV6};
 use std::str::FromStr;
 use std::fmt;
@@ -24,12 +23,7 @@ pub mod visa_socket;
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum InstAddr {
-    VisaGPIB(VisaAddress<GPIB>),
-    VisaVXI11(VisaAddress<VXI>),
-    VisaSocket(VisaAddress<Socket>),
-    VisaHislip(VisaAddress<Hislip>),
-    VisaUSB(VisaAddress<USB>),
-    VisaSerial(VisaAddress<Serial>),
+    Visa(VisaAddress),
     Socket(Socket),
 }
 
@@ -76,12 +70,7 @@ impl InstAddr {
 
     pub fn address(&self) -> Cow<str> {
         match self {
-            InstAddr::VisaGPIB(addr) => (&addr.address).into(),
-            InstAddr::VisaVXI11(addr) => (&addr.address).into(),
-            InstAddr::VisaSocket(addr) => (&addr.address).into(),
-            InstAddr::VisaUSB(addr) => (&addr.address).into(),
-            InstAddr::VisaSerial(addr) => (&addr.address).into(),
-            InstAddr::VisaHislip(addr) => (&addr.address).into(),
+            InstAddr::Visa(addr) => (&addr.address).into(),
             InstAddr::Socket(addr)=> match addr {
                 Socket::V4(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
                 Socket::V6(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
@@ -92,28 +81,20 @@ impl InstAddr {
     ///Consume the address and return a communication interface
     pub fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
         match self {
-            InstAddr::VisaGPIB(addr) => addr.connect(),
-            InstAddr::VisaVXI11(addr) => addr.connect(),
-            InstAddr::VisaSocket(addr) => addr.connect(),
-            InstAddr::VisaHislip(addr) => addr.connect(),
-            InstAddr::VisaUSB(addr) => addr.connect(),
-            InstAddr::VisaSerial(addr) => addr.connect(),
+            InstAddr::Visa(addr) => addr.connect(),
             InstAddr::Socket(addr) => addr.connect(),
         }
     }
 }
-
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VXI;
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct GPIB;
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct USB;
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct Serial;
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct Hislip;
-
+pub enum VisaType{
+    GPIB,
+    Socket,
+    USB,
+    Hislip,
+    Serial,
+    VXI,
+}
 impl FromStr for InstAddr {
     type Err = String;
     fn from_str(address: &str) -> Result<Self, Self::Err> {
@@ -122,27 +103,26 @@ impl FromStr for InstAddr {
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VisaAddress<T> 
+pub struct VisaAddress 
 {
     address: String,
-    visa_type: PhantomData<T>,
+    visa_type: VisaType,
 }
-impl<T> VisaAddress <T>{
+impl VisaAddress {
     fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
         let x=visa_conn::VisaConn::connect(self,None)?;
         todo!()
     }
 }
-impl <T> Into<*const i8> for VisaAddress<T> {
+impl Into<*const i8> for VisaAddress {
     fn into(self) -> *const i8 {
         CString::new(self.address).unwrap_or(CString::default()).as_ptr()
     }
 }
 
-impl <T> From<VisaAddress<T>> for InstAddr {
-    fn from(val: VisaAddress<T>) -> Self {
-        //This presents a challenge given that not all T could translate into InstAddr. If we separated these functions to known types of T that will introduce too much redundancy and unncessary complexity.
-        todo!()
+impl From<VisaAddress> for InstAddr {
+    fn from(val: VisaAddress) -> Self {
+        InstAddr::Visa(val)
     }
 }
 

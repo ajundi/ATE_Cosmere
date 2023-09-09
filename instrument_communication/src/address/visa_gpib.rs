@@ -13,22 +13,30 @@ pub fn parse_gpib(captures: regex::Captures) -> Result<InstAddr, String> {
             captures[1].to_string()
         };
         let address = format!("gpib{}::{}::instr", board_num, instr_num);
-        return Ok(InstAddr::VisaGPIB(VisaAddress {
+        return Ok(InstAddr::Visa(VisaAddress {
             address,
-            visa_type: PhantomData::<GPIB>,
+            visa_type: VisaType::GPIB,
         }));
     } else {
         Err(format!("Invalid primary GPIB address {}", instr_num))
     }
 }
 
-impl VisaAddress<GPIB> {
+impl VisaAddress {
     #[allow(dead_code)]
-    fn complement_address(&self) -> String {
-        let address_parts: Vec<&str> = self.address.split("::").collect();
-        let mut num = address_parts[1].parse::<i32>().unwrap();
-        num += (num % 2 == 0).then(|| 1).unwrap_or(-1);
-        return format!("{}::{}::{}", address_parts[0], num, address_parts[2]);
+    fn gpib_complement_address(&self) -> Option<String> {
+        match self.visa_type {
+            VisaType::GPIB => {
+                let address_parts: Vec<&str> = self.address.split("::").collect();
+                let mut num = address_parts[1].parse::<i32>().unwrap();
+                num += (num % 2 == 0).then(|| 1).unwrap_or(-1);
+                Some(format!(
+                    "{}::{}::{}",
+                    address_parts[0], num, address_parts[2]
+                ))
+            }
+            _ => None,
+        }
     }
 }
 
@@ -43,9 +51,9 @@ mod tests {
     fn test_gpib_complement_address(original: &str, expected: &str) {
         let address = VisaAddress {
             address: String::from(original),
-            visa_type: PhantomData::<GPIB>,
+            visa_type: VisaType::GPIB,
         };
-        assert_eq!(&address.complement_address(), expected);
+        assert_eq!(&address.gpib_complement_address().unwrap(), expected);
     }
 
     #[test_case("GPIB0::18::INSTR", "GPIB0::17::INSTR")]
@@ -56,9 +64,11 @@ mod tests {
     fn test_gpib_complement_address_fails(original: &str, expected: &str) {
         let address = VisaAddress {
             address: String::from(original),
-            visa_type: PhantomData::<GPIB>,
+            visa_type: VisaType::GPIB,
         };
-        assert!(!address.complement_address().eq_ignore_ascii_case(expected));
+        assert!(!address
+            .gpib_complement_address().unwrap()
+            .eq_ignore_ascii_case(expected));
     }
 
     #[test_case("GPIB0::15::INSTR","gpib0::15::instr";"This is basic format for a GPIB address.")]

@@ -10,12 +10,13 @@ pub use bindings::*;
 use dlopen::wrapper::Container;
 use std::borrow::Cow;
 // use visa::Visa;
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,Default)]
 pub enum Binary {
-    ///Keysight specific Visa binary which only exists if Keysight IO is installed. Source: https://www.keysight.com/de/de/lib/software-detail/computer-software/io-libraries-suite-downloads-2175637/keysight-io-libraries-suite-2022-for-windows.html
+    ///Keysight specific Visa binary which only exists if Keysight IO is installed. Source: <https://www.keysight.com/de/de/lib/software-detail/computer-software/io-libraries-suite-downloads-2175637/keysight-io-libraries-suite-2022-for-windows.html>
     Keysight,
-    ///National Instruments specific Visa binary which only exists if Ni-Visa is installed. Source: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
+    ///National Instruments specific Visa binary which only exists if Ni-Visa is installed. Source: <https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html>
     NiVisa,
+    #[default]
     ///Primary visa binary. This could be any vendor implementation. If visa from any vendor is installed, this option typically works. The primary binary is typically named visa32.dll in windows.
     Primary,
     ///Custom path to a binary
@@ -61,12 +62,6 @@ impl Binary {
     }
 }
 
-impl Default for Binary {
-    fn default() -> Self {
-        Binary::Primary
-    }
-}
-
 impl ToString for Binary {
     fn to_string(&self) -> String {
         self.binary_name()
@@ -82,7 +77,7 @@ impl ToString for Binary {
 /// .or_else(|_| visa::create(&visa::Binary::Custom("visa.so".into())));
 ///```
 pub fn create(bin: &Binary) -> Result<Container<VisaFuncs>, Error> {
-    unsafe { Container::load(bin.binary_name()?.as_ref()).map_err(|e| Error::from(e)) }
+    unsafe { Container::load(bin.binary_name()?.as_ref()).map_err(Error::from) }
 }
 
 #[cfg(test)]

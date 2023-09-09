@@ -23,23 +23,23 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         use self::Error::*;
-        f.write_str(&format!("{self}"))?;
+        f.write_str(&format!("{:?}",self))?;
         match self {
-            &OpeningLibraryError(ref msg) => {
+            OpeningLibraryError(msg) => {
                 f.write_str(": ")?;
                 msg.fmt(f)
             }
-            &SymbolGettingError(ref msg) => {
+            SymbolGettingError(msg) => {
                 f.write_str(": ")?;
                 msg.fmt(f)
             }
-            &NullSymbol => f.write_str(": Symbol is Null."),
-            &PathNotMatchingLibrary(ref msg) => {
+            NullSymbol => f.write_str(": Symbol is Null."),
+            PathNotMatchingLibrary(msg) => {
                 f.write_str(": Path does not lead to a library.")?;
                 msg.fmt(f)
             }
-            &NullCharacter => f.write_str(": The path contains a null character."),
-            &UnsupportedPlatform => f.write_str(": The target system is not supported by visa."),
+            NullCharacter => f.write_str(": The path contains a null character."),
+            UnsupportedPlatform => f.write_str(": The target system is not supported by visa."),
         }
     }
 }
@@ -59,13 +59,13 @@ impl From<dlopen::Error> for Error {
 impl ErrorTrait for Error {
     fn description(&self) -> &str {
         use self::Error::*;
-        match self {
-            &OpeningLibraryError(_) => "Could not open library",
-            &SymbolGettingError(_) => "Could not obtain symbol from the library",
-            &NullSymbol => "The symbol is NULL",
-            &PathNotMatchingLibrary(_) => "Address does not match any dynamic link library",
-            &NullCharacter => "Uncategorized",
-            &UnsupportedPlatform => "The target system is not supported by visa",
+        match *self {
+            OpeningLibraryError(_) => "Could not open library",
+            SymbolGettingError(_) => "Could not obtain symbol from the library",
+            NullSymbol => "The symbol is NULL",
+            PathNotMatchingLibrary(_) => "Address does not match any dynamic link library",
+            NullCharacter => "Uncategorized",
+            UnsupportedPlatform => "The target system is not supported by visa",
         }
     }
 

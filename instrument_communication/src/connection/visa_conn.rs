@@ -136,7 +136,7 @@ impl InstConnection for VisaConn {
         todo!()
     }
 
-    fn set_timeout(&self, timeout: u64) -> Result<(), crate::err::Error> {
+    fn set_timeout(&self, timeout: Duration) -> Result<(), crate::err::Error> {
         todo!()
     }
 

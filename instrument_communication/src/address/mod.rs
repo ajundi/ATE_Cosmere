@@ -139,6 +139,13 @@ impl <T> Into<*const i8> for VisaAddress<T> {
     }
 }
 
+impl <T> From<VisaAddress<T>> for InstAddr {
+    fn from(val: VisaAddress<T>) -> Self {
+        //This presents a challenge given that not all T could translate into InstAddr. If we separated these functions to known types of T that will introduce too much redundancy and unncessary complexity.
+        todo!()
+    }
+}
+
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct RawSocket{
     host_name: String ,

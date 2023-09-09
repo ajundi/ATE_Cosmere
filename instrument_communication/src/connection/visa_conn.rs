@@ -143,3 +143,8 @@ impl InstConnection for VisaConn {
     }
 }
 
+#[test]
+fn test_if_visa_not_installed_change_visa_socket_to_use_raw_socket() {
+    let x = InstAddr::new("tcpip::localhost::5025::socket").unwrap();
+    x.connect();
+}

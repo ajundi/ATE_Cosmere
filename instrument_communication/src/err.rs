@@ -7,4 +7,5 @@ pub enum Error {
     OpenSessionError(Cow<'static, str>),
     ParseFailed(Cow<'static, str>),
     ConnectionFailed(Cow<'static, str>),
+    VisaFunctionFailure(Cow<'static, str>),
 }

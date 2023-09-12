@@ -110,8 +110,12 @@ pub struct VisaAddress {
 }
 impl VisaAddress {
     fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
-        let x = visa_conn::VisaConn::connect(self, None)?;
-        todo!()
+        let connection = visa_conn::VisaConn::connect(self, None)?;
+        Ok(Box::new(connection) as Box<dyn InstConnection>)
+    }
+
+    pub fn get_type(&self)->VisaType{
+        self.visa_type
     }
 }
 impl From<VisaAddress> for *const i8 {

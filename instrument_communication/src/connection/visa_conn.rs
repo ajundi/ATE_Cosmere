@@ -1,4 +1,4 @@
-use crate::address::{InstAddr, VisaAddress};
+use crate::address::{InstAddr, VisaAddress, VisaType};
 use crate::communication::InstConnection;
 use crate::err::Error;
 use crate::termination_bytes::TerminationBytes;
@@ -23,10 +23,10 @@ lazy_static! {
 pub struct VisaConn {
     visa: Arc<Container<VisaFuncs>>,
     bin: Binary,
-    address: InstAddr,
+    address: VisaAddress,
     buffer_size: usize,
     session: u32,
-    term_string: TerminationBytes,
+    term_string: Option<TerminationBytes>,
     frame_size: usize,
     is_term_char_attr_set: bool,
     timeout: Duration,
@@ -54,35 +54,60 @@ impl VisaConn {
         let lib = try_load_binary(binary.clone())?;
         let mut vi = 0;
         match lib.0.viOpen(lib.1, addr.clone().into(), 0, 0, &mut vi) {
-            status if status >= 0 => (),
-            status => {
-                let msg = get_error_code(lib.0, vi, status).unwrap_or("Failed to connect".into());
+            status if status < 0 => {
+                let msg = get_error_code(&lib.0, vi, status).unwrap_or("Failed to connect".into());
                 return Err(Error::ConnectionFailed(msg));
             }
+            _ => (),
         };
         match lib.0.viClear(vi) {
-            status if status < 0 =>{
-                let msg = get_error_code(lib.0, vi, status).unwrap_or("Failed to Clear, which indicate that most likely no usable instrument exists on this address even if it opens.".into());
+            status if status < 0 => {
+                let msg = get_error_code(&lib.0, vi, status).unwrap_or("Failed to Clear, which indicate that most likely no usable instrument exists on this address even if it opens.".into());
                 return Err(Error::ConnectionFailed(msg));
-            },
-            _=>(),
+            }
+            _ => (),
         };
-        Ok(VisaConn {
+        let mut visa_conn = VisaConn {
             visa: lib.0,
             bin: binary,
-            address: addr.into(),
+            address: addr,
             buffer_size: DEFAULT_BUFFER_SIZE,
             session: vi,
-            term_string: TerminationBytes::default(),
+            term_string: None,
             frame_size: DEFAULT_BUFFER_SIZE,
             is_term_char_attr_set: false,
             timeout: Duration::from_secs(2),
+        };
+        visa_conn.set_termination(TerminationBytes::LF)?;
+        Ok(visa_conn)
+    }
+    /// Checks if we should avoid enabling the term character attribute in the VISA driver.
+    /// GPIB could have legacy equipment that sends binary data, which might have the
+    /// termination character as a false positive. Moreover, GPIB has special signaling that 
+    /// indicates the end of transmission. Other types might also benefit from this.
+    /// This setting only avoids checking termination for received data.
+    fn should_avoid_term_char(visa_type:VisaType)->bool{
+        matches!(visa_type, VisaType::GPIB)
+    }
+
+    fn disable_term_char(&mut self) -> Result<(), Error> {
+        Ok(match self.visa.viSetAttribute(
+            self.session,
+            visa::VI_ATTR_TERMCHAR_EN,
+            0,
+        ) {
+            status if status < 0 => {
+                let msg = get_error_code(&self.visa, self.session, status)
+                    .unwrap_or_else(|| "Failed to disable termination char".into());
+                Err(Error::VisaFunctionFailure(msg))?
+            }
+            _ => (),
         })
     }
 }
 
 fn get_error_code(
-    lib: Arc<Container<VisaFuncs>>,
+    lib: &Arc<Container<VisaFuncs>>,
     vi: u32,
     status: i32,
 ) -> Option<Cow<'static, str>> {
@@ -138,7 +163,7 @@ fn try_load_binary(binary: Binary) -> Result<(Arc<Container<VisaFuncs>>, u32), E
 
 impl InstConnection for VisaConn {
     fn address(&self) -> InstAddr {
-        todo!()
+        InstAddr::Visa(self.address.clone())
     }
 
     fn set_timeout(&self, timeout: Duration) -> Result<(), Error> {
@@ -147,6 +172,43 @@ impl InstConnection for VisaConn {
 
     fn reconnect(&self) -> Result<(), Error> {
         todo!()
+    }
+
+    fn set_termination(&mut self, term_bytes: TerminationBytes) -> Result<(), Error> {
+        if VisaConn::should_avoid_term_char(self.address.get_type()){
+            self.disable_term_char()?;
+        }
+        else if let Some(last_byte)= term_bytes.bytes().last() {
+            match self.visa.viSetAttribute(
+                self.session,
+                visa::VI_ATTR_TERMCHAR,
+                *last_byte as u64,
+            ) {
+                status if status < 0 => {
+                    let msg = get_error_code(&self.visa, self.session, status)
+                        .unwrap_or_else(|| "Failed to set termination char".into());
+                    Err(Error::VisaFunctionFailure(msg))?
+                }
+                _ => (),
+            }
+            match self.visa.viSetAttribute(
+                self.session,
+                visa::VI_ATTR_TERMCHAR_EN,
+                1,
+            ) {
+                status if status < 0 => {
+                    let msg = get_error_code(&self.visa, self.session, status)
+                        .unwrap_or_else(|| "Failed to enable termination char".into());
+                    Err(Error::VisaFunctionFailure(msg))?
+                }
+                _ => (),
+            }
+        }
+        else{
+            self.disable_term_char()?;
+        }
+        self.term_string=Some(term_bytes);
+        Ok(())
     }
 }
 

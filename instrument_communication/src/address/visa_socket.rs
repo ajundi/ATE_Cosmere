@@ -7,14 +7,14 @@ lazy_static! {
 
 pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> {
     let board_num = captures[1].to_string();
-    let board_num = if board_num.len() == 0 {
-        "0".to_owned()
+    let board_num = if board_num.is_empty() {
+        "0".into()
     } else {
         board_num
     };
     let host_ip = captures[2].to_string();
-    let socket: Socket = format!("{}:{}", host_ip, captures[3].to_string()).parse()?;
-    return Ok(InstAddr::Visa(VisaAddress {
+    let socket: Socket = format!("{}:{}", host_ip, &captures[3]).parse()?;
+    Ok(InstAddr::Visa(VisaAddress {
         address: format!(
             "tcpip{}::{}::{}::socket",
             board_num,
@@ -22,7 +22,7 @@ pub fn parse_visa_socket(captures: regex::Captures) -> Result<InstAddr, String> 
             socket.port()
         ),
         visa_type: VisaType::Socket,
-    }));
+    }))
 }
 
 #[cfg(test)]

@@ -7,16 +7,16 @@ lazy_static! {
 pub fn parse_gpib(captures: regex::Captures) -> Result<InstAddr, String> {
     let instr_num = captures[2].to_string();
     if instr_num.len() < 3 && instr_num.cmp(&"31".to_owned()) == std::cmp::Ordering::Less {
-        let board_num = if captures[1].len() == 0 {
+        let board_num = if captures[1].is_empty() {
             "0".to_owned()
         } else {
             captures[1].to_string()
         };
         let address = format!("gpib{}::{}::instr", board_num, instr_num);
-        return Ok(InstAddr::Visa(VisaAddress {
+        Ok(InstAddr::Visa(VisaAddress {
             address,
             visa_type: VisaType::GPIB,
-        }));
+        }))
     } else {
         Err(format!("Invalid primary GPIB address {}", instr_num))
     }
@@ -29,7 +29,7 @@ impl VisaAddress {
             VisaType::GPIB => {
                 let address_parts: Vec<&str> = self.address.split("::").collect();
                 let mut num = address_parts[1].parse::<i32>().unwrap();
-                num += (num % 2 == 0).then(|| 1).unwrap_or(-1);
+                num += if num % 2 == 0 { 1 } else { -1 };
                 Some(format!(
                     "{}::{}::{}",
                     address_parts[0], num, address_parts[2]

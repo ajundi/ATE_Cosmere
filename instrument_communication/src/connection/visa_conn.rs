@@ -8,8 +8,8 @@ use log::error;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use visa::*;
 use std::time::Duration;
+use visa::*;
 
 const MAXIMUM_BUFFER_SIZE: usize = 50000000;
 const DEFAULT_BUFFER_SIZE: usize = 4096;
@@ -45,10 +45,7 @@ impl VisaConn {
         }
     }
 
-    pub fn connect(
-        addr: VisaAddress,
-        override_binary: Option<Binary>,
-    ) -> Result<VisaConn, Error> {
+    pub fn connect(addr: VisaAddress, override_binary: Option<Binary>) -> Result<VisaConn, Error> {
         let binary = match override_binary {
             Some(b) => b,
             None => VisaConn::get_default_binary(),
@@ -69,7 +66,7 @@ impl VisaConn {
                 return Err(Error::ConnectionFailed(msg));
             }
         };
-        Ok(VisaConn{
+        Ok(VisaConn {
             bin: lib.0,
             address: addr.into(),
             buffer_size: DEFAULT_BUFFER_SIZE,
@@ -82,7 +79,11 @@ impl VisaConn {
     }
 }
 
-fn get_error_code(lib: Arc<Container<VisaFuncs>>, vi: u32, status: i32) -> Option<Cow<'static,str>> {
+fn get_error_code(
+    lib: Arc<Container<VisaFuncs>>,
+    vi: u32,
+    status: i32,
+) -> Option<Cow<'static, str>> {
     let mut resp = vec![0u8; ERR_MSG_BUFFER_SIZE];
     match lib.viStatusDesc(vi, status, resp.as_mut_ptr()) {
         0 => {
@@ -96,7 +97,7 @@ fn get_error_code(lib: Arc<Container<VisaFuncs>>, vi: u32, status: i32) -> Optio
     }
 }
 
-fn try_load_binary<'a>(binary: Binary) -> Result<(Arc<Container<VisaFuncs>>, u32), Error> {
+fn try_load_binary(binary: Binary) -> Result<(Arc<Container<VisaFuncs>>, u32), Error> {
     let mut mutx_grd = match VISA_DICTIONARY.lock() {
         Ok(m) => m,
         Err(e) => {
@@ -104,25 +105,24 @@ fn try_load_binary<'a>(binary: Binary) -> Result<(Arc<Container<VisaFuncs>>, u32
             e.into_inner()
         }
     };
-    let bin = binary.clone();
     let visa = match mutx_grd.get(&binary) {
         Some(visa_lib) => visa_lib,
         None => {
             match visa::create(&binary) {
                 Ok(lib) => {
-                    let mut viSession: u32 = 0;
-                    let status = lib.viOpenDefaultRM(&mut viSession);
-                    if viSession != 0 {
-                        mutx_grd.insert(binary, Ok((Arc::new(lib), viSession)));
+                    let mut vi_session: u32 = 0;
+                    let status = lib.viOpenDefaultRM(&mut vi_session);
+                    if vi_session != 0 {
+                        mutx_grd.insert(binary.clone(), Ok((Arc::new(lib), vi_session)));
                     } else {
-                        mutx_grd.insert(binary, Err(Error::OpenSessionError(format!("visa session did not instantiate properly. visa dll exists but there might be a missing dependancy. status error code: {status}").into())));
+                        mutx_grd.insert(binary.clone(), Err(Error::OpenSessionError(format!("visa session did not instantiate properly. visa dll exists but there might be a missing dependancy. status error code: {status}").into())));
                     }
                 }
                 Err(err) => {
-                    mutx_grd.insert(binary, Err(Error::BinaryError(format!("{:?}", err).into())));
+                    mutx_grd.insert(binary.clone(), Err(Error::BinaryError(format!("{:?}", err).into())));
                 }
             }
-            mutx_grd.get(&bin).unwrap()
+            mutx_grd.get(&binary).unwrap()
         }
     };
     match visa {
@@ -136,11 +136,11 @@ impl InstConnection for VisaConn {
         todo!()
     }
 
-    fn set_timeout(&self, timeout: Duration) -> Result<(), crate::err::Error> {
+    fn set_timeout(&self, timeout: Duration) -> Result<(), Error> {
         todo!()
     }
 
-    fn reconnect(&self) -> Result<(), crate::err::Error> {
+    fn reconnect(&self) -> Result<(), Error> {
         todo!()
     }
 }

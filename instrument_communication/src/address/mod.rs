@@ -4,19 +4,19 @@ use hostname;
 use lazy_static::lazy_static;
 use regex::Regex;
 use socket::*;
+use std::borrow::Cow;
 use std::ffi::CString;
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4,SocketAddrV6};
-use std::str::FromStr;
 use std::fmt;
+use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, SocketAddrV6};
+use std::str::FromStr;
 use visa_gpib::*;
 use visa_socket::*;
 use visa_vxi::*;
-use std::borrow::Cow;
 
 pub mod socket;
 pub mod visa_gpib;
-pub mod visa_vxi;
 pub mod visa_socket;
+pub mod visa_vxi;
 // pub mod visa_hislip;
 // pub mod visa_usb;
 
@@ -34,11 +34,11 @@ impl fmt::Display for InstAddr {
 }
 
 impl InstAddr {
-    /// this function takes care of parsing and creating new instance for 
-    /// all types of instrument addresses if the address matches any of 
+    /// this function takes care of parsing and creating new instance for
+    /// all types of instrument addresses if the address matches any of
     /// the regex patterns defined above it will assume that it will not
-    /// match any other format. It will then attempt to parse it and return 
-    /// a Result. Note this function doesn't handle UTF8 host names yet. 
+    /// match any other format. It will then attempt to parse it and return
+    /// a Result. Note this function doesn't handle UTF8 host names yet.
     /// It is already being explored.
     /// ```rust
     /// use instrument_communication::address::InstAddr;
@@ -52,8 +52,9 @@ impl InstAddr {
     /// assert_eq!(method2,method3);
     /// assert_eq!(method3,method4);
     /// ```
-    pub fn new(address:impl AsRef<str>)->Result<Self, String>{
-        let address = address.as_ref()
+    pub fn new(address: impl AsRef<str>) -> Result<Self, String> {
+        let address = address
+            .as_ref()
             .split_whitespace()
             .collect::<String>()
             .to_ascii_lowercase();
@@ -71,11 +72,11 @@ impl InstAddr {
     pub fn address(&self) -> Cow<str> {
         match self {
             InstAddr::Visa(addr) => (&addr.address).into(),
-            InstAddr::Socket(addr)=> match addr {
+            InstAddr::Socket(addr) => match addr {
                 Socket::V4(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
                 Socket::V6(socket) => format!("{}:{}", socket.ip(), socket.port()).into(),
                 Socket::Raw(socket) => format!("{}:{}", socket.host_name, socket.port).into(),
-            }
+            },
         }
     }
     ///Consume the address and return a communication interface
@@ -87,7 +88,7 @@ impl InstAddr {
     }
 }
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub enum VisaType{
+pub enum VisaType {
     GPIB,
     Socket,
     USB,
@@ -103,20 +104,21 @@ impl FromStr for InstAddr {
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct VisaAddress 
-{
+pub struct VisaAddress {
     address: String,
     visa_type: VisaType,
 }
 impl VisaAddress {
     fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
-        let x=visa_conn::VisaConn::connect(self,None)?;
+        let x = visa_conn::VisaConn::connect(self, None)?;
         todo!()
     }
 }
-impl Into<*const i8> for VisaAddress {
-    fn into(self) -> *const i8 {
-        CString::new(self.address).unwrap_or(CString::default()).as_ptr()
+impl From<VisaAddress> for *const i8 {
+    fn from(val: VisaAddress) -> Self {
+        CString::new(val.address)
+            .unwrap_or(CString::default())
+            .as_ptr()
     }
 }
 
@@ -127,7 +129,7 @@ impl From<VisaAddress> for InstAddr {
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
-pub struct RawSocket{
-    host_name: String ,
+pub struct RawSocket {
+    host_name: String,
     port: u16,
 }

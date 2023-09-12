@@ -47,9 +47,9 @@ impl Socket {
     /// assert_eq!(method3,method4);
     /// ```
     pub fn new(address: impl AsRef<str>) -> Result<Self, String> {
-        let splits: Vec<&str> = address.as_ref().split(":").map(str::trim).collect();
+        let splits: Vec<&str> = address.as_ref().split(':').map(str::trim).collect();
         if splits.len() < 2 {
-            return Err(format!("Incorrect Socket address format. Address format is shown inside the quotes \"IP:PortNumber\" Or \"HostName:PortNumber\" examples:\n 192.168.0.20:8080 or PCNAME1:50050"));
+            return Err("Incorrect Socket address format. Address format is shown inside the quotes \"IP:PortNumber\" Or \"HostName:PortNumber\" examples:\n 192.168.0.20:8080 or PCNAME1:50050".into());
         }
         let (port, ip) = splits
             .split_last()
@@ -120,7 +120,8 @@ pub enum NetworkAddr {
     RAW(String),
 }
 
-impl NetworkAddr {
+impl FromStr for NetworkAddr {
+    type Err = String;
     /// This is a non-standard IP and hostname implementation as It accepts IPs written
     /// with leading zeros such as 127.00.000.001  
     ///
@@ -133,7 +134,7 @@ impl NetworkAddr {
     /// assert_eq!(parse_ip("127.00.000.001"),parse_ip("localhost "));
     /// assert_ne!(parse_ip("127.0.0.2"),parse_ip("127.0.0.1"));
     /// ```
-    pub fn from_str(addr: &str) -> Result<NetworkAddr, String> {
+    fn from_str(addr: &str) -> Result<NetworkAddr, String> {
         let ip_or_host: &str = addr.trim();
         let split_ip = ip_or_host.split('.').collect::<Vec<_>>();
         let count = split_ip.len();
@@ -165,7 +166,7 @@ impl NetworkAddr {
             Ok(NetworkAddr::V4(Ipv4Addr::LOCALHOST))
         } else if let Ok(ipv6) = ip_or_host.parse::<Ipv6Addr>() {
             Ok(NetworkAddr::V6(ipv6))
-        } else if HOSTNAME_REGEX.is_match(&ip_or_host) {
+        } else if HOSTNAME_REGEX.is_match(ip_or_host) {
             Ok(NetworkAddr::RAW(ip_or_host.into()))
         } else {
             return Err(format!("Unable to parse IP or hostname: {}", ip_or_host));
@@ -194,10 +195,7 @@ impl Display for NetworkAddr{
 /// assert!(!is_u8("256"));
 /// ```
 fn is_u8(s: &str) -> bool {
-    match s.parse::<u8>() {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    s.parse::<u8>().is_ok()
 }
 
 #[cfg(test)]

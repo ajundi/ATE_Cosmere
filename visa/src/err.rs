@@ -23,7 +23,7 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         use self::Error::*;
-        f.write_str(&format!("{:?}",self))?;
+        f.write_str(&format!("{:?}", self))?;
         match self {
             OpeningLibraryError(msg) => {
                 f.write_str(": ")?;

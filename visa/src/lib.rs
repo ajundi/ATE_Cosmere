@@ -10,7 +10,7 @@ pub use bindings::*;
 use dlopen::wrapper::Container;
 use std::borrow::Cow;
 // use visa::Visa;
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Binary {
     ///Keysight specific Visa binary which only exists if Keysight IO is installed. Source: <https://www.keysight.com/de/de/lib/software-detail/computer-software/io-libraries-suite-downloads-2175637/keysight-io-libraries-suite-2022-for-windows.html>
     Keysight,

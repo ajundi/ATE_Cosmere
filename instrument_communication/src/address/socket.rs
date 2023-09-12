@@ -1,6 +1,6 @@
-use std::net::Ipv6Addr;
-use std::fmt::Display;
 use crate::address::*;
+use std::fmt::Display;
+use std::net::Ipv6Addr;
 
 const NUMBER_IPV4_OCTETS: usize = 4;
 
@@ -86,7 +86,7 @@ impl Socket {
     }
 
     pub fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
-        match self{
+        match self {
             Socket::V4(addr) => todo!(),
             Socket::V6(addr) => todo!(),
             Socket::Raw(addr) => todo!(),
@@ -174,7 +174,7 @@ impl FromStr for NetworkAddr {
     }
 }
 
-impl Display for NetworkAddr{
+impl Display for NetworkAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NetworkAddr::V4(addr) => addr.fmt(f),
@@ -214,8 +214,17 @@ mod test {
 
     #[test]
     fn testing_localhost_and_its_ip_match() {
-        assert_eq!(NetworkAddr::from_str("127.00.000.001"), NetworkAddr::from_str("127.0.0.1"));
-        assert_eq!(NetworkAddr::from_str("127.00.000.001"), NetworkAddr::from_str("localhost "));
-        assert_ne!(NetworkAddr::from_str("127.0.0.2"), NetworkAddr::from_str("127.0.0.1"));
+        assert_eq!(
+            NetworkAddr::from_str("127.00.000.001"),
+            NetworkAddr::from_str("127.0.0.1")
+        );
+        assert_eq!(
+            NetworkAddr::from_str("127.00.000.001"),
+            NetworkAddr::from_str("localhost ")
+        );
+        assert_ne!(
+            NetworkAddr::from_str("127.0.0.2"),
+            NetworkAddr::from_str("127.0.0.1")
+        );
     }
 }

@@ -14,7 +14,7 @@ pub fn parse_visa_vxi11(captures: regex::Captures) -> Result<InstAddr, String> {
         board_num
     };
     let host_ip = captures[2].to_string();
-    let ip_or_host =  NetworkAddr::from_str(&host_ip)?;
+    let ip_or_host = NetworkAddr::from_str(&host_ip)?;
     Ok(InstAddr::Visa(VisaAddress {
         address: format!("tcpip{}::{}::instr", board_num, ip_or_host),
         visa_type: VisaType::VXI,

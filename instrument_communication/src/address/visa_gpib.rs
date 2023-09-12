@@ -67,7 +67,8 @@ mod tests {
             visa_type: VisaType::GPIB,
         };
         assert!(!address
-            .gpib_complement_address().unwrap()
+            .gpib_complement_address()
+            .unwrap()
             .eq_ignore_ascii_case(expected));
     }
 

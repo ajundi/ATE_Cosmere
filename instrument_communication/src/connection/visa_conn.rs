@@ -119,7 +119,10 @@ fn try_load_binary(binary: Binary) -> Result<(Arc<Container<VisaFuncs>>, u32), E
                     }
                 }
                 Err(err) => {
-                    mutx_grd.insert(binary.clone(), Err(Error::BinaryError(format!("{:?}", err).into())));
+                    mutx_grd.insert(
+                        binary.clone(),
+                        Err(Error::BinaryError(format!("{:?}", err).into())),
+                    );
                 }
             }
             mutx_grd.get(&binary).unwrap()

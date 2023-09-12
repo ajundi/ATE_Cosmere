@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{err::Error, address::InstAddr};
+use crate::{address::InstAddr, err::Error};
 
 pub trait InstConnection {
     fn address(&self) -> InstAddr;

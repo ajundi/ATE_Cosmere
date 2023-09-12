@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 #[non_exhaustive]
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum Error {
     Timeout,
     BinaryError(Cow<'static, str>),

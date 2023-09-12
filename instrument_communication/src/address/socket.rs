@@ -64,7 +64,7 @@ impl Socket {
             NetworkAddr::V6(addr) => Ok(Socket::V6(SocketAddrV6::new(addr, port, 0, 0))),
             NetworkAddr::RAW(addr) => Ok(Socket::Raw(RawSocket {
                 host_name: addr.to_owned(),
-                port: port,
+                port,
             })),
         }
     }

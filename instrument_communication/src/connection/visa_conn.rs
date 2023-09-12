@@ -21,7 +21,8 @@ lazy_static! {
         Mutex::new(HashMap::new());
 }
 pub struct VisaConn {
-    bin: Arc<Container<VisaFuncs>>,
+    visa: Arc<Container<VisaFuncs>>,
+    bin: Binary,
     address: InstAddr,
     buffer_size: usize,
     session: u32,
@@ -50,7 +51,7 @@ impl VisaConn {
             Some(b) => b,
             None => VisaConn::get_default_binary(),
         };
-        let lib = try_load_binary(binary)?;
+        let lib = try_load_binary(binary.clone())?;
         let mut vi = 0;
         match lib.0.viOpen(lib.1, addr.clone().into(), 0, 0, &mut vi) {
             status if status >= 0 => (),
@@ -60,14 +61,15 @@ impl VisaConn {
             }
         };
         match lib.0.viClear(vi) {
-            status if status >= 0 => (),
-            status => {
+            status if status < 0 =>{
                 let msg = get_error_code(lib.0, vi, status).unwrap_or("Failed to Clear, which indicate that most likely no usable instrument exists on this address even if it opens.".into());
                 return Err(Error::ConnectionFailed(msg));
-            }
+            },
+            _=>(),
         };
         Ok(VisaConn {
-            bin: lib.0,
+            visa: lib.0,
+            bin: binary,
             address: addr.into(),
             buffer_size: DEFAULT_BUFFER_SIZE,
             session: vi,

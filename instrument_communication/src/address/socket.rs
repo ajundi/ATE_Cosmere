@@ -1,4 +1,5 @@
 use crate::address::*;
+use crate::connection::tcp_conn::TcpConn;
 use std::fmt::Display;
 use std::net::Ipv6Addr;
 
@@ -63,7 +64,7 @@ impl Socket {
             NetworkAddr::V4(addr) => Ok(Socket::V4(SocketAddrV4::new(addr, port))),
             NetworkAddr::V6(addr) => Ok(Socket::V6(SocketAddrV6::new(addr, port, 0, 0))),
             NetworkAddr::RAW(addr) => Ok(Socket::Raw(RawSocket {
-                host_name: addr.to_owned(),
+                host_name: addr.into(),
                 port,
             })),
         }
@@ -73,7 +74,7 @@ impl Socket {
         match self {
             Socket::V4(ref addr) => addr.ip().to_string().into(),
             Socket::V6(ref addr) => addr.ip().to_string().into(),
-            Socket::Raw(addr) => (&addr.host_name).into(),
+            Socket::Raw(addr) => (&addr.host_name).clone(),
         }
     }
 
@@ -86,11 +87,7 @@ impl Socket {
     }
 
     pub fn connect(self) -> Result<Box<dyn InstConnection>, Error> {
-        match self {
-            Socket::V4(addr) => todo!(),
-            Socket::V6(addr) => todo!(),
-            Socket::Raw(addr) => todo!(),
-        }
+        TcpConn::connect(self)
     }
 }
 

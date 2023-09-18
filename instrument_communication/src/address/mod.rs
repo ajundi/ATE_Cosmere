@@ -7,7 +7,7 @@ use socket::*;
 use std::borrow::Cow;
 use std::ffi::CString;
 use std::fmt;
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, SocketAddrV6};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 use std::str::FromStr;
 use visa_gpib::*;
 use visa_socket::*;
@@ -114,7 +114,7 @@ impl VisaAddress {
         Ok(Box::new(connection) as Box<dyn InstConnection>)
     }
 
-    pub fn get_type(&self)->VisaType{
+    pub fn get_type(&self) -> VisaType {
         self.visa_type
     }
 }
@@ -134,6 +134,36 @@ impl From<VisaAddress> for InstAddr {
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub struct RawSocket {
-    host_name: String,
+    host_name: Cow<'static,str>,
     port: u16,
+}
+
+impl RawSocket {
+    /// get a reference to the hostname 
+    pub fn host_name<'a>(&'a self) -> Cow<'a, str> {
+        (&self.host_name).clone()
+    }
+    /// Since RawSocket contains the hostname we don't have guarantee that the host name can be translated into an ip address.
+    /// this function gets the SocketAddr object if it exists. The priority will be given to an ipv4 address but an ipv6 will
+    /// be returned in the case where the hostname doesn't have an ipv4 address.
+    pub fn get_ipv4_first(&self) -> Option<SocketAddr> {
+        let mut first_ipv6: Option<SocketAddr> = None;
+        for addr in format!("{}:0", &self.host_name).to_socket_addrs().ok()? {
+            match addr {
+                SocketAddr::V4(ipv4_addr) => return Some(SocketAddr::V4(ipv4_addr)),
+                SocketAddr::V6(ipv6_addr) => {
+                    if first_ipv6.is_none() {
+                        first_ipv6 = Some(SocketAddr::V6(ipv6_addr));
+                    }
+                }
+            }
+        }
+        first_ipv6
+    }
+}
+
+impl std::fmt::Display for RawSocket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}:{}",&self.host_name,&self.port))
+    }
 }

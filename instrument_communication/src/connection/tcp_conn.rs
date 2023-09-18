@@ -80,8 +80,14 @@ impl InstConnection for TcpConn {
         Ok(())
     }
 
-    fn reconnect(&self) -> Result<(), Error> {
-        todo!()
+    fn reconnect(&mut self) -> Result<(), Error> {
+        let _ = self
+            .connection
+            .shutdown(Shutdown::Write)
+            .map_err(|e| log::error!("{e}"));
+        let conn = get_tcp_stream(self.address.clone())?;
+        self.connection = conn;
+        Ok(())
     }
 
     fn set_termination(&mut self, term_bytes: TerminationBytes) -> Result<(), Error> {

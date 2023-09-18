@@ -27,7 +27,7 @@ pub struct VisaConn {
     buffer_size: usize,
     session: u32,
     term_string: Option<TerminationBytes>,
-    frame_size: usize,
+    frame_size: Option<usize>,
     is_term_char_attr_set: bool,
     timeout: Duration,
 }
@@ -74,7 +74,7 @@ impl VisaConn {
             buffer_size: DEFAULT_BUFFER_SIZE,
             session: vi,
             term_string: None,
-            frame_size: DEFAULT_BUFFER_SIZE,
+            frame_size: None,
             is_term_char_attr_set: false,
             timeout: Duration::from_secs(2),
         };
@@ -83,26 +83,27 @@ impl VisaConn {
     }
     /// Checks if we should avoid enabling the term character attribute in the VISA driver.
     /// GPIB could have legacy equipment that sends binary data, which might have the
-    /// termination character as a false positive. Moreover, GPIB has special signaling that 
+    /// termination character as a false positive. Moreover, GPIB has special signaling that
     /// indicates the end of transmission. Other types might also benefit from this.
     /// This setting only avoids checking termination for received data.
-    fn should_avoid_term_char(visa_type:VisaType)->bool{
+    fn should_avoid_term_char(visa_type: VisaType) -> bool {
         matches!(visa_type, VisaType::GPIB)
     }
 
     fn disable_term_char(&mut self) -> Result<(), Error> {
-        Ok(match self.visa.viSetAttribute(
-            self.session,
-            visa::VI_ATTR_TERMCHAR_EN,
-            0,
-        ) {
-            status if status < 0 => {
-                let msg = get_error_code(&self.visa, self.session, status)
-                    .unwrap_or_else(|| "Failed to disable termination char".into());
-                Err(Error::VisaFunctionFailure(msg))?
-            }
-            _ => (),
-        })
+        Ok(
+            match self
+                .visa
+                .viSetAttribute(self.session, visa::VI_ATTR_TERMCHAR_EN, 0)
+            {
+                status if status < 0 => {
+                    let msg = get_error_code(&self.visa, self.session, status)
+                        .unwrap_or_else(|| "Failed to disable termination char".into());
+                    Err(Error::FunctionFailure(msg))?
+                }
+                _ => (),
+            },
+        )
     }
 }
 
@@ -170,44 +171,40 @@ impl InstConnection for VisaConn {
         todo!()
     }
 
-    fn reconnect(&self) -> Result<(), Error> {
+    fn reconnect(&mut self) -> Result<(), Error> {
         todo!()
     }
 
     fn set_termination(&mut self, term_bytes: TerminationBytes) -> Result<(), Error> {
-        if VisaConn::should_avoid_term_char(self.address.get_type()){
+        if VisaConn::should_avoid_term_char(self.address.get_type()) {
             self.disable_term_char()?;
-        }
-        else if let Some(last_byte)= term_bytes.bytes().last() {
-            match self.visa.viSetAttribute(
-                self.session,
-                visa::VI_ATTR_TERMCHAR,
-                *last_byte as u64,
-            ) {
+        } else if let Some(last_byte) = term_bytes.bytes().last() {
+            match self
+                .visa
+                .viSetAttribute(self.session, visa::VI_ATTR_TERMCHAR, *last_byte as u64)
+            {
                 status if status < 0 => {
                     let msg = get_error_code(&self.visa, self.session, status)
                         .unwrap_or_else(|| "Failed to set termination char".into());
-                    Err(Error::VisaFunctionFailure(msg))?
+                    Err(Error::FunctionFailure(msg))?
                 }
                 _ => (),
             }
-            match self.visa.viSetAttribute(
-                self.session,
-                visa::VI_ATTR_TERMCHAR_EN,
-                1,
-            ) {
+            match self
+                .visa
+                .viSetAttribute(self.session, visa::VI_ATTR_TERMCHAR_EN, 1)
+            {
                 status if status < 0 => {
                     let msg = get_error_code(&self.visa, self.session, status)
                         .unwrap_or_else(|| "Failed to enable termination char".into());
-                    Err(Error::VisaFunctionFailure(msg))?
+                    Err(Error::FunctionFailure(msg))?
                 }
                 _ => (),
             }
-        }
-        else{
+        } else {
             self.disable_term_char()?;
         }
-        self.term_string=Some(term_bytes);
+        self.term_string = Some(term_bytes);
         Ok(())
     }
 }
